@@ -24,14 +24,14 @@ export const MODELS = [
     active:  true,
   },
   {
-    id:      'qwen2.5',
-    label:   'Qwen 2.5',
+    id:      'qwen3.5:2b',
+    label:   'Qwen 3.5',
     backend: 'ollama',
     color:   '#60a5fa',
     active:  false,
   },
   {
-    id:      'gemma3',
+    id:      'gemma3:4b',
     label:   'Gemma 3',
     backend: 'ollama',
     color:   '#f472b6',
@@ -45,7 +45,7 @@ export const MODELS = [
     active:  false,
   },
   {
-    id:      'deepseek-r1',
+    id:      'deepseek-r1:1.5b',
     label:   'DeepSeek-R1',
     backend: 'ollama',
     color:   '#fb923c',

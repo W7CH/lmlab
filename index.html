@@ -78,14 +78,16 @@
         </div>
       </div>
 
-      <!-- Ollama base URL -->
+      <!-- Ollama status indicator -->
       <div>
-        <div class="section-label">Ollama Endpoint</div>
-        <div class="apikey-box">
-          <label for="ollamaUrl">Base URL</label>
-          <div class="apikey-row">
-            <input type="text" id="ollamaUrl" placeholder="http://localhost:11434" />
+        <div class="section-label">Ollama</div>
+        <div class="ollama-status-pill ollama-status-unknown" id="ollamaStatusPill">
+          <div class="ollama-status-dot" id="ollamaStatusDot"></div>
+          <div class="ollama-status-text">
+            <span class="ollama-status-label" id="ollamaStatusLabel">Checking…</span>
+            <span class="ollama-status-sub"   id="ollamaStatusSub"></span>
           </div>
+          <button class="ollama-check-btn" id="ollamaCheckBtn" title="Re-check">↺</button>
         </div>
       </div>
 

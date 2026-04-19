@@ -1,10 +1,10 @@
 # LMLab
 
-A zero-dependency browser dashboard for evaluating and comparing LLM models side-by-side using the **`chat.completions`** API.
+A browser dashboard for evaluating and comparing LLM models side-by-side using the **`chat.completions`** API.
 
 Supports **Ollama** (local models) and **Google Gemini** — both via the same OpenAI-compatible request shape.
 
-![screenshot placeholder](https://placehold.co/900x500/0d0f14/6c8bff?text=LMLab)
+![screenshot placeholder](https://placehold.co/600x200/0d0f14/6c8bff?text=LMLab)
 
 ---
 
@@ -16,7 +16,8 @@ Supports **Ollama** (local models) and **Google Gemini** — both via the same O
 - **Metrics** — latency (ms), estimated token count, tokens/sec, fastest-model badge
 - **Syntax highlighting** — Python code blocks via highlight.js
 - **Preset prompts** — 6 built-in Python coding tasks; add your own in `js/config.js`
-- **Configurable** — temperature, max tokens, Ollama base URL all editable in the UI
+- **Configurable** — temperature, max tokens all editable in the UI
+- **Ollama-friendly** — Ollama is automatically checked and started before each run. A live status indicator in the sidebar shows whether Ollama is running, and `server.js` will spawn `ollama serve` for you if it isn't.
 
 ---
 
@@ -24,41 +25,77 @@ Supports **Ollama** (local models) and **Google Gemini** — both via the same O
 
 ```
 lmlab/
+├── server.js           # Dev server + Ollama lifecycle manager (run this)
 ├── index.html          # Page shell — HTML only, no inline styles or scripts
 ├── css/
 │   ├── variables.css   # Design tokens (:root) — edit to retheme
 │   ├── layout.css      # Reset, header, sidebar, content area
 │   └── components.css  # Every reusable UI component
 ├── js/
-│   ├── config.js       # ★ Model registry + prompt presets — edit this to add models
-│   ├── api.js          # fetch wrappers for Ollama and Gemini
-│   ├── ui.js           # DOM builders (cards, model list, status bar, summary)
+│   ├── config.js       # Model registry + prompt presets — edit to add models
+│   ├── ollama.js       # Browser-side Ollama health check + auto-start client
+│   ├── api.js          # fetch() wrappers for Ollama (via proxy) and Gemini
+│   ├── ui.js           # DOM builders (cards, model list, status bar, Ollama pill)
 │   ├── charts.js       # Latency bar chart + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator
-│   └── main.js         # Entry point — wires everything together
+│   └── main.js         # Entry point — wires everything, handles tabs
 └── README.md
 ```
 
 > **The only file you need to edit regularly is `js/config.js`** — add/remove models, change defaults, write new prompt presets.
+---
+
+## How it works
+
+```
+Browser                  server.js               Ollama
+────────────────────────────────────────────────────────────
+
+GET /api/ollama/health ──► checkOllamaHealth()
+                          ──► fetch(:11434/api/tags) ──────►
+                          ◄──────── { running, models } ────
+◄──────── JSON response ──
+
+POST /api/ollama/start ──► spawn("ollama serve")
+                          ──► poll until ready ────────────►
+                          ◄──────── { running: true } ──────
+◄──────── JSON response ──
+
+POST /v1/chat/completions ─► proxy to :11434/v1/ ──────────►
+                            ◄──────── streamed response ────
+◄────── streamed response ──
+```
+
+- The browser **never talks directly to Ollama** — all traffic goes through the proxy. This eliminates CORS issues entirely.
+- If Ollama is already running when the page loads, it is used as-is and the auto-start is skipped.
+- If `ollama serve` was started by the server, it is stopped cleanly when you press `Ctrl+C`.
 
 ---
 
 ## Prerequisites
 
-| Requirement | Purpose |
+| Requirement | Notes |
 |---|---|
-| A modern browser (Chrome 90+, Firefox 90+, Safari 15+, Edge 90+) | ES Modules support |
-| [Ollama](https://ollama.com) installed and running | Local model inference |
-| Google AI Studio API key | Gemini models only |
+| **Node.js 18+** | Uses native `fetch` and `fs/promises` |
+| **Ollama** | [ollama.com](https://ollama.com/download) |
+| **Google AI Studio API key** | Required only for Gemini models — [get one here](https://aistudio.google.com/app/apikey) |
+
+Verify Node.js version:
+
+```bash
+node --version   # must be v18.0.0 or higher
+```
 
 ### Pull your Ollama models
+  
+The server will start Ollama, but models must be pre-pulled:
 
 ```bash
 ollama pull llama3.2
-ollama pull qwen2.5
 ollama pull gemma3
-ollama pull phi3
 ollama pull deepseek-r1
+ollama pull phi3
+ollama pull qwen3.5
 ```
 
 Verify they are available:
@@ -73,63 +110,42 @@ ollama list
 
 ## How to Run
 
-Because the app uses ES Modules (`<script type="module">`), it **must be served over HTTP** — you cannot open `index.html` directly from the filesystem (`file://` URLs block module imports).
-
-Choose any of the options below:
-
-### Option 1 — Python (no install required)
-
 ```bash
+# 1. Clone or unzip the project
 cd lmlab
-python3 -m http.server 8080
+
+# 2. Start the server (no npm install needed)
+node server.js
+
+# 3. Open the dashboard
+#    → http://localhost:8080
 ```
 
-Then open: **http://localhost:8080**
+That's it. The server:
+- Serves all static files
+- Checks whether Ollama is running on startup
+- Auto-starts `ollama serve` before the first evaluation run if needed
+- Proxies all `/v1/*` requests to Ollama (no CORS config required)
 
-### Option 2 — Node.js `serve`
-
-```bash
-npx serve lmlab
-```
-
-Then open the URL printed in the terminal (usually **http://localhost:3000**).
-
-### Option 3 — VS Code Live Server extension
-
-1. Open the `lmlab/` folder in VS Code
-2. Right-click `index.html` → **Open with Live Server**
-
-### Option 4 — Any static file server
-
-```bash
-# caddy
-caddy file-server --root ./lmlab --listen :8080
-
-# nginx (one-liner with Docker)
-docker run -p 8080:80 -v $(pwd)/lmlab:/usr/share/nginx/html nginx
-```
+Press `Ctrl+C` to stop. If the server started Ollama, it will be stopped too.
 
 ---
 
 ## Configuration
 
-### Adding a new Ollama model
-
-Open `js/config.js` and add an entry to the `MODELS` array:
+### Adding / removing models  (`js/config.js`)
 
 ```js
+// Add an Ollama model
 {
-  id:      'mistral',       // must match `ollama list` exactly
-  label:   'Mistral 7B',    // display name in the UI
+  id:      'mistral',       // exact name from `ollama list`
+  label:   'Mistral 7B',
   backend: 'ollama',
-  color:   '#f59e0b',       // accent colour in the timing chart
-  active:  false,           // selected by default?
+  color:   '#f59e0b',       // bar chart accent colour
+  active:  false,           // pre-selected by default?
 },
-```
 
-### Adding a new Gemini model
-
-```js
+// Add a Gemini model
 {
   id:      'gemini-1.5-pro',
   label:   'Gemini 1.5 Pro',
@@ -139,74 +155,60 @@ Open `js/config.js` and add an entry to the `MODELS` array:
 },
 ```
 
-### Adding a prompt preset
+### Adding prompt presets  (`js/config.js`)
 
 ```js
 export const PRESETS = {
-  // ...existing presets...
-  'Linked list': `Implement a singly linked list in Python with insert, delete, search, and reverse methods. Include type hints and unit tests.`,
+  // ... existing ...
+  'Linked list': `Implement a singly linked list in Python with insert, delete,
+search, and reverse. Include type hints and unit tests.`,
 };
 ```
 
-### Changing default parameters
+### Changing defaults  (`js/config.js`)
 
 ```js
 export const DEFAULTS = {
   temperature: 0.3,    // lower = more deterministic
   maxTokens:   2048,
-  ollamaUrl:   'http://192.168.1.10:11434',  // remote Ollama instance
 };
 ```
 
 ---
 
-## How the API calls work
+## Troubleshooting
 
-Both backends use the identical OpenAI-compatible request shape in `js/api.js`:
+- **`ollama: command not found`:**
+Install Ollama from [ollama.com](https://ollama.com/download) and make sure it's on your `PATH`.
 
-```js
-POST /v1/chat/completions
-{
-  "model":       "<model-id>",
-  "messages":    [{ "role": "user", "content": "<prompt>" }],
-  "temperature": 0.7,
-  "max_tokens":  1024
-}
-```
+- **Ollama starts but models return errors:**
+Run `ollama list` and verify the model names match the `id` fields in `js/config.js` exactly (e.g. `llama3.2`, not `llama3`).
 
-| Backend | Endpoint | Auth |
-|---|---|---|
-| Ollama | `http://localhost:11434/v1/chat/completions` | None |
-| Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `Authorization: Bearer <API_KEY>` |
+- **Gemini returns 401:**
+
+  Your API key is invalid or missing. Get one at https://aistudio.google.com/app/apikey and enter it in the sidebar.
+
+- **Port 8080 already in use:**
+Change `const PORT = 8080` at the top of `server.js` to any free port.
+
+- **Node.js version too old:**
+`node server.js` will print a syntax error. Upgrade to Node 18+:
+
+  Get the right installer from https://nodejs.org/en/download
 
 ---
 
-## Troubleshooting
+## Contributions
 
-**CORS error when calling Ollama**
+Contributions are always welcome! 
 
-Ollama blocks cross-origin requests by default. Set the environment variable before starting it:
+If you are interested in collaborating or have ideas on how to improve this project, please feel free to reach out:
 
-```bash
-OLLAMA_ORIGINS="*" ollama serve
-# or on macOS/Linux, add to your shell profile:
-export OLLAMA_ORIGINS="*"
-```
-
-**Model returns 404**
-
-Run `ollama list` and copy the exact model name (including tag, e.g. `llama3.2:latest`) into the `id` field in `js/config.js`.
-
-**Gemini returns 401**
-
-Your API key is invalid or missing. Get one at https://aistudio.google.com/app/apikey and enter it in the sidebar.
-
-**`file://` — module import blocked**
-
-Open the app via a local HTTP server (see [How to Run](#how-to-run)). Browsers intentionally block ES Module imports on `file://` URLs.
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/wassim-chakroun/)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:wess.chakroun@yahoo.com)
 
 ---
 
 ## License
 
-MIT
+[MIT](https://choosealicense.com/licenses/mit/)

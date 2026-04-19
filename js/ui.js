@@ -229,3 +229,32 @@ function copyToClipboard(text, btn) {
     setTimeout(() => { btn.textContent = original; }, 1500);
   });
 }
+
+// ─── OLLAMA STATUS INDICATOR ─────────────────────────────────────────────────
+
+/**
+ * Update the Ollama status pill in the sidebar.
+ * @param {'unknown'|'checking'|'running'|'stopped'|'error'} state
+ * @param {string} [detail]  — optional extra text (e.g. model count or error)
+ */
+export function setOllamaStatus(state, detail = '') {
+  const pill  = document.getElementById('ollamaStatusPill');
+  const dot   = document.getElementById('ollamaStatusDot');
+  const label = document.getElementById('ollamaStatusLabel');
+  const sub   = document.getElementById('ollamaStatusSub');
+  if (!pill) return;
+
+  // Remove all state classes, add the new one
+  pill.className = `ollama-status-pill ollama-status-${state}`;
+
+  const labels = {
+    unknown:  'Unknown',
+    checking: 'Checking…',
+    running:  'Running',
+    stopped:  'Not running',
+    error:    'Error',
+  };
+
+  label.textContent = labels[state] ?? state;
+  if (sub) sub.textContent = detail;
+}

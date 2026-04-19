@@ -3,23 +3,22 @@
  *
  * Responsibilities:
  *   - Bootstrap the page (render model list, presets, set defaults)
+ *   - Run an Ollama health check on page load and keep the sidebar indicator live
  *   - Wire the Run button to eval.js
  *   - Handle tab switching
- *
- * Imports everything; nothing imports main.js.
  */
 
 import { MODELS, PRESETS, DEFAULTS } from './config.js';
-import { renderModelList, renderPresets } from './ui.js';
+import { renderModelList, renderPresets, setOllamaStatus } from './ui.js';
+import { checkHealth, pollUntilReady } from './ollama.js';
 import { runEval } from './eval.js';
 
-// ─── BOOT ────────────────────────────────────────────────────────────────────
+// ─── STATE ────────────────────────────────────────────────────────────────────
 
-/**
- * Selected model IDs — mutated by the toggle list in ui.js.
- * Declared here so runEval() can read the current state.
- */
+/** Selected model IDs — mutated by the toggle list rendered in ui.js. */
 let selectedModels;
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
   // Render sidebar controls
@@ -34,10 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('promptInput'),
   );
 
-  // Populate default values
-  document.getElementById('tempInput').value    = DEFAULTS.temperature;
+  // Populate defaults
+  document.getElementById('tempInput').value      = DEFAULTS.temperature;
   document.getElementById('maxTokensInput').value = DEFAULTS.maxTokens;
-  document.getElementById('ollamaUrl').value    = DEFAULTS.ollamaUrl;
 
   // Wire Run button
   document.getElementById('runBtn').addEventListener('click', () => {
@@ -48,7 +46,36 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
+
+  // ── Initial Ollama health check ──────────────────────────────────────────
+  initOllamaStatus();
+
+  // ── Re-check button ───────────────────────────────────────────────────────
+  document.getElementById('ollamaCheckBtn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.classList.add('spinning');
+    await initOllamaStatus();
+    btn.classList.remove('spinning');
+  });
 });
+
+// ─── OLLAMA STATUS (page load) ────────────────────────────────────────────────
+
+async function initOllamaStatus() {
+  setOllamaStatus('checking', 'Pinging localhost:11434…');
+
+  const health = await checkHealth();
+
+  if (health.running) {
+    const modelCount = health.models?.length ?? 0;
+    setOllamaStatus(
+      'running',
+      modelCount > 0 ? `${modelCount} model(s) pulled` : 'No models pulled yet',
+    );
+  } else {
+    setOllamaStatus('stopped', 'Will auto-start on Run');
+  }
+}
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 

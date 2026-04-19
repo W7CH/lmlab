@@ -2,18 +2,25 @@
  * eval.js
  *
  * Orchestrates a full evaluation run:
- *   1. Reads prompt + parameters from the UI
- *   2. Fires all selected models in parallel (Promise.allSettled)
- *   3. Updates each result card as responses arrive
- *   4. Computes summary statistics once everything settles
+ *   0. Pre-flight: ensure Ollama is running (auto-start if needed)
+ *   1. Read prompt + parameters from the UI
+ *   2. Fire all selected models in parallel (Promise.allSettled)
+ *   3. Update each result card as responses arrive
+ *   4. Compute summary statistics once everything settles
  *
- * Depends on: api.js, ui.js, charts.js
+ * Depends on: api.js, ollama.js, ui.js, charts.js
  */
 
-import { callOllama, callGemini }       from './api.js';
+import { callOllama, callGemini }        from './api.js';
+import { ensureOllamaRunning }           from './ollama.js';
 import {
-  setStatus, insertLoadingCard, updateCard,
-  markWinner, hideEmptyState, hideSummary,
+  setStatus,
+  setOllamaStatus,
+  insertLoadingCard,
+  updateCard,
+  markWinner,
+  hideEmptyState,
+  hideSummary,
   renderSummary,
 } from './ui.js';
 import { buildLatencyChart, buildCompareTable } from './charts.js';
@@ -23,12 +30,12 @@ import { buildLatencyChart, buildCompareTable } from './charts.js';
 /**
  * Run an evaluation over the selected models.
  *
- * @param {Array}      models         - Full MODELS array from config.js
- * @param {Set<string>} selectedIds   - IDs of models the user has toggled on
+ * @param {Array}       models       - Full MODELS array from config.js
+ * @param {Set<string>} selectedIds  - IDs of models the user toggled on
  * @returns {Promise<void>}
  */
 export async function runEval(models, selectedIds) {
-  // ── Validate inputs ────────────────────────────────────────────────────────
+  // ── 1. Validate inputs ────────────────────────────────────────────────────
   if (selectedIds.size === 0) {
     setStatus('error', 'Select at least one model before running.');
     return;
@@ -43,9 +50,11 @@ export async function runEval(models, selectedIds) {
   const temperature = parseFloat(document.getElementById('tempInput').value);
   const maxTokens   = parseInt(document.getElementById('maxTokensInput').value, 10);
   const apiKey      = document.getElementById('apiKeyInput').value.trim();
-  const ollamaBase  = document.getElementById('ollamaUrl').value.trim();
 
-  // ── Reset UI ───────────────────────────────────────────────────────────────
+  const modelsToRun = models.filter(m => selectedIds.has(m.id));
+  const needsOllama = modelsToRun.some(m => m.backend === 'ollama');
+
+  // ── 2. Disable UI ─────────────────────────────────────────────────────────
   const runBtn = document.getElementById('runBtn');
   runBtn.disabled = true;
   hideSummary();
@@ -54,27 +63,45 @@ export async function runEval(models, selectedIds) {
   const grid = document.getElementById('resultsGrid');
   grid.innerHTML = '';
 
+  // ── 3. Ollama pre-flight (only if any Ollama models are selected) ──────────
+  if (needsOllama) {
+    setStatus('running', 'Checking Ollama…');
+
+    try {
+      await ensureOllamaRunning((msg) => {
+        setStatus('running', msg);
+        setOllamaStatus('checking', msg);
+      });
+
+      setOllamaStatus('running', 'Ollama is running');
+    } catch (err) {
+      setStatus('error', err.message);
+      setOllamaStatus('error', 'Ollama failed to start');
+      runBtn.disabled = false;
+      return;
+    }
+  }
+
+  // ── 4. Start wall-clock timer in header badge ─────────────────────────────────────────────
   setStatus('running', `Running ${selectedIds.size} model(s) in parallel…`);
 
-  // ── Start wall-clock timer in header badge ─────────────────────────────────
   const runStart      = Date.now();
   const timerBadge    = document.getElementById('runTimer');
   const timerInterval = setInterval(() => {
     timerBadge.textContent = `${((Date.now() - runStart) / 1000).toFixed(1)}s`;
   }, 100);
 
-  // ── Build loading-state cards ──────────────────────────────────────────────
-  const modelsToRun = models.filter(m => selectedIds.has(m.id));
+  // ── 5. Insert loading-state cards ─────────────────────────────────────────
   modelsToRun.forEach(m => insertLoadingCard(m, grid));
 
-  // ── Fire all requests in parallel ─────────────────────────────────────────
+  // ── 6. Fire all requests in parallel ─────────────────────────────────────
   const resultsMap = {};
 
   const tasks = modelsToRun.map(async (m) => {
     const start = Date.now();
     try {
       const res = m.backend === 'ollama'
-        ? await callOllama(m.id, prompt, temperature, maxTokens, ollamaBase)
+        ? await callOllama(m.id, prompt, temperature, maxTokens)
         : await callGemini(m.id, prompt, temperature, maxTokens, apiKey);
 
       const elapsed = Date.now() - start;
@@ -90,13 +117,13 @@ export async function runEval(models, selectedIds) {
 
   await Promise.allSettled(tasks);
 
-  // ── Teardown timer ────────────────────────────────────────────────────────
+  // ── 7. Teardown ───────────────────────────────────────────────────────────
   clearInterval(timerInterval);
   const totalMs = Date.now() - runStart;
   timerBadge.textContent = `${(totalMs / 1000).toFixed(2)}s total`;
   runBtn.disabled = false;
 
-  // ── Finalise results ──────────────────────────────────────────────────────
+  // ── 8. Finalise results ───────────────────────────────────────────────────
   finalise(resultsMap);
 }
 

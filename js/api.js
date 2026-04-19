@@ -68,8 +68,10 @@ async function callCompletions(url, body, headers = {}) {
  * @param {string} baseUrl     - e.g. "http://localhost:11434"
  * @returns {Promise<{ text: string, tokens: number }>}
  */
-export async function callOllama(modelId, prompt, temperature, maxTokens, baseUrl) {
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+export async function callOllama(modelId, prompt, temperature, maxTokens) {
+  // Requests go to our local proxy at /v1/* which server.js forwards to Ollama.
+  // This avoids all CORS issues and keeps the browser unaware of the Ollama port.
+  const url = '/v1/chat/completions';
 
   const body = {
     model:      modelId,
