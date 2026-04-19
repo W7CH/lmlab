@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LMLab</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Syntax highlighting (highlight.js — atom-one-dark theme) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+  <!-- Styles (load order matters: variables → layout → components) -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- App entry point (ES module; imports config, api, ui, eval, charts) -->
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <h1>LMLab</h1>
+        <span>Ollama + Gemini · chat.completions API</span>
+      </div>
+    </div>
+    <div class="header-badge" id="runTimer">ready</div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MAIN SPLIT LAYOUT
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Prompt textarea + presets -->
+      <div>
+        <div class="section-label">Prompt</div>
+        <div class="prompt-box">
+          <label for="promptInput">Task prompt</label>
+          <textarea
+            id="promptInput"
+            placeholder="Write a Python function that…"
+          >Write a Python function that checks if a string is a palindrome, handles edge cases (empty string, spaces, punctuation), and includes docstring + type hints + 3 unit tests using unittest.</textarea>
+          <div class="prompt-presets" id="presetContainer">
+            <!-- Injected by ui.js → renderPresets() -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Google API key -->
+      <div>
+        <div class="section-label">Google API Key</div>
+        <div class="apikey-box">
+          <label for="apiKeyInput">Required for Gemini models</label>
+          <div class="apikey-row">
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy…" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Ollama base URL -->
+      <div>
+        <div class="section-label">Ollama Endpoint</div>
+        <div class="apikey-box">
+          <label for="ollamaUrl">Base URL</label>
+          <div class="apikey-row">
+            <input type="text" id="ollamaUrl" placeholder="http://localhost:11434" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Generation parameters -->
+      <div>
+        <div class="section-label">Parameters</div>
+        <div class="settings-block">
+          <div class="setting-row">
+            <label for="tempInput">Temperature</label>
+            <input type="number" id="tempInput" min="0" max="2" step="0.1" />
+          </div>
+          <div class="setting-row">
+            <label for="maxTokensInput">Max tokens</label>
+            <input type="number" id="maxTokensInput" min="128" max="4096" step="128" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Model toggles -->
+      <div>
+        <div class="section-label">Models</div>
+        <div class="model-list" id="modelList">
+          <!-- Injected by ui.js → renderModelList() -->
+        </div>
+      </div>
+
+      <!-- Run button -->
+      <button class="run-btn" id="runBtn">
+        <span>▶</span> Run Evaluation
+      </button>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ── CONTENT AREA ─────────────────────────────────────────────────── -->
+    <main class="content">
+
+      <!-- Status bar -->
+      <div class="status-bar" id="statusBar">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Select models and click "Run Evaluation" to start.</span>
+      </div>
+
+      <!-- Summary metrics + tab bar (hidden until first run) -->
+      <div id="summarySection" class="hidden">
+        <div class="section-header">
+          <h2>Run Summary</h2>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="results">Results</button>
+            <button class="tab-btn"        data-tab="compare">Compare Table</button>
+            <button class="tab-btn"        data-tab="chart">Timing Chart</button>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="metric-card">
+            <div class="metric-label">Models run</div>
+            <div class="metric-val"  id="metricModels">—</div>
+            <div class="metric-sub" id="metricSuccess">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Fastest response</div>
+            <div class="metric-val"  id="metricFastest">—</div>
+            <div class="metric-sub" id="metricFastestModel">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg latency</div>
+            <div class="metric-val"  id="metricAvg">—</div>
+            <div class="metric-sub">across all models</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg tokens</div>
+            <div class="metric-val"  id="metricTokens">—</div>
+            <div class="metric-sub">completion tokens</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: Results grid ──────────────────────────────────────────── -->
+      <div id="tabResults">
+        <div class="results-grid" id="resultsGrid"></div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">◎</div>
+          <div class="empty-title">No results yet</div>
+          <div class="empty-sub">
+            Configure your prompt and models on the left, then click Run Evaluation.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: Compare table ─────────────────────────────────────────── -->
+      <div id="tabCompare" class="hidden">
+        <div class="compare-wrapper">
+          <table class="compare-table" id="compareTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Model</th>
+                <th>Backend</th>
+                <th>Latency (ms)</th>
+                <th>Tokens (est.)</th>
+                <th>Tok / sec (est.)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── TAB: Timing chart ──────────────────────────────────────────── -->
+      <div id="tabChart" class="hidden">
+        <p class="chart-title">Response latency (ms) — lower is faster</p>
+        <div class="bar-chart" id="latencyChart"></div>
+      </div>
+
+    </main><!-- /content -->
+  </div><!-- /main -->
+
+</body>
+</html>
