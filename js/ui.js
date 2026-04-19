@@ -22,9 +22,46 @@ export function setStatus(type, message) {
 // ─── MODEL TOGGLE LIST ────────────────────────────────────────────────────────
 
 /**
- * Render the model toggle list in the sidebar.
- * Returns a Set<string> of currently active model IDs (mutated by click).
- * @param {import('./config.js').MODELS} models
+ * Show a transient loading / error state inside the model list container.
+ * Replaced by renderModelList() once data arrives.
+ *
+ * @param {'loading'|'error'} state
+ * @param {string} [message]
+ */
+export function setModelListState(state, message = '') {
+  const container = document.getElementById('modelList');
+  if (!container) return;
+
+  if (state === 'loading') {
+    // Render skeleton rows that match the height of real model items
+    container.innerHTML = Array.from({ length: 4 }, () => `
+      <div class="model-item-skeleton">
+        <div class="skeleton-dot"></div>
+        <div class="skeleton-label"></div>
+        <div class="skeleton-badge"></div>
+      </div>
+    `).join('');
+  } else if (state === 'error') {
+    container.innerHTML = `
+      <div class="model-list-error">
+        <span class="model-list-error-icon">⚠</span>
+        <span>${message || 'Could not load models'}</span>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Render the model toggle list.
+ * Returns a Set<string> of active model IDs — mutated on click.
+ *
+ * Each model item shows:
+ *   • A colored indicator dot (uses model.color)
+ *   • The model label
+ *   • Backend badge (ollama / gemini)
+ *   • Size badge if available (e.g. "3.8 GB")
+ *
+ * @param {Array}       models
  * @param {HTMLElement} container
  * @returns {Set<string>}
  */
@@ -33,13 +70,27 @@ export function renderModelList(models, container) {
 
   container.innerHTML = '';
 
+  if (models.length === 0) {
+    container.innerHTML = `
+      <div class="model-list-empty">No models found. Run <code>ollama pull &lt;model&gt;</code> to install one.</div>
+    `;
+    return selected;
+  }
+
   models.forEach(m => {
     const item = document.createElement('div');
     item.className  = `model-item${selected.has(m.id) ? ' active' : ''}`;
     item.dataset.id = m.id;
-    item.innerHTML  = `
-      <div class="model-dot"></div>
-      <span class="model-name">${m.label}</span>
+
+    // Size badge — only for Ollama models that have size info
+    const sizeBadge = m.meta?.sizeGb
+      ? `<span class="model-size">${m.meta.sizeGb} GB</span>`
+      : '';
+
+    item.innerHTML = `
+      <div class="model-dot" style="--model-color: ${m.color};"></div>
+      <span class="model-name" title="${m.id}">${m.label}</span>
+      ${sizeBadge}
       <span class="model-backend">${m.backend}</span>
     `;
 
@@ -64,12 +115,11 @@ export function renderModelList(models, container) {
 /**
  * Render preset-prompt buttons inside the prompt box footer.
  * @param {Record<string,string>} presets
- * @param {HTMLElement} container
- * @param {HTMLTextAreaElement} textarea
+ * @param {HTMLElement}           container
+ * @param {HTMLTextAreaElement}   textarea
  */
 export function renderPresets(presets, container, textarea) {
   container.innerHTML = '';
-
   Object.entries(presets).forEach(([label, text]) => {
     const btn = document.createElement('button');
     btn.className   = 'preset-btn';
@@ -82,17 +132,16 @@ export function renderPresets(presets, container, textarea) {
 // ─── RESULT CARDS ─────────────────────────────────────────────────────────────
 
 /**
- * Insert a loading-state card into the grid.
- * The card will later be replaced by updateCard().
- * @param {{ id: string, label: string, backend: string }} model
+ * Insert a loading-state placeholder card.
+ * @param {{ id: string, label: string, backend: string, color: string }} model
  * @param {HTMLElement} grid
  */
 export function insertLoadingCard(model, grid) {
-  const card    = document.createElement('div');
+  const card     = document.createElement('div');
   card.className = 'result-card';
   card.id        = `card-${model.id}`;
   card.innerHTML = `
-    <div class="card-header">
+    <div class="card-header" style="--card-accent: ${model.color};">
       <span class="card-model-name">${model.label}</span>
       <div class="card-badges">
         <span class="badge badge-${model.backend}">${model.backend}</span>
@@ -111,17 +160,16 @@ export function insertLoadingCard(model, grid) {
 }
 
 /**
- * Replace a loading card with the actual result.
- * Calls hljs.highlightElement() on the code block if available.
+ * Replace a loading card with the completed result.
  * @param {string} modelId
- * @param {{ status: string, text?: string, tokens?: number, elapsed: number,
- *           error?: string, model: Object }} result
+ * @param {{ status, text?, tokens?, elapsed, error?, model }} result
  */
 export function updateCard(modelId, result) {
   const card = document.getElementById(`card-${modelId}`);
   if (!card) return;
 
-  const m = result.model;
+  const m       = result.model;
+  const accent  = m.color ?? '#6c8bff';
 
   const bodyHtml = result.status === 'ok'
     ? `<pre><code class="language-python">${escapeHtml(result.text)}</code></pre>`
@@ -130,7 +178,7 @@ export function updateCard(modelId, result) {
   if (result.status === 'error') card.classList.add('error-card');
 
   card.innerHTML = `
-    <div class="card-header">
+    <div class="card-header" style="--card-accent: ${accent};">
       <span class="card-model-name">${m.label}</span>
       <div class="card-badges">
         <span class="badge badge-${m.backend}">${m.backend}</span>
@@ -158,15 +206,13 @@ export function updateCard(modelId, result) {
     });
   }
 
-  // Copy handler
-  const copyBtn = card.querySelector('.copy-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => copyToClipboard(result.text, copyBtn));
-  }
+  card.querySelector('.copy-btn')?.addEventListener('click', () =>
+    copyToClipboard(result.text, card.querySelector('.copy-btn'))
+  );
 }
 
 /**
- * Add the "fastest" winner badge to a result card.
+ * Add the "fastest" winner badge to a card and highlight its border.
  * @param {string} modelId
  */
 export function markWinner(modelId) {
@@ -198,36 +244,21 @@ export function hideEmptyState() {
 
 /**
  * Populate and reveal the summary metric cards.
- * @param {{ total: number, success: number, failed: number,
- *           fastest: Object, avgLatency: number, avgTokens: number }} stats
+ * @param {{ total, success, failed, fastest, avgLatency, avgTokens }} stats
  */
 export function renderSummary(stats) {
   document.getElementById('summarySection').classList.remove('hidden');
-  document.getElementById('metricModels').textContent      = stats.total;
-  document.getElementById('metricSuccess').textContent     = `${stats.success} success · ${stats.failed} failed`;
-  document.getElementById('metricFastest').textContent     = `${stats.fastest.elapsed}ms`;
+  document.getElementById('metricModels').textContent       = stats.total;
+  document.getElementById('metricSuccess').textContent      = `${stats.success} success · ${stats.failed} failed`;
+  document.getElementById('metricFastest').textContent      = `${stats.fastest.elapsed}ms`;
   document.getElementById('metricFastestModel').textContent = stats.fastest.model.label;
-  document.getElementById('metricAvg').textContent         = `${stats.avgLatency}ms`;
-  document.getElementById('metricTokens').textContent      = stats.avgTokens;
+  document.getElementById('metricAvg').textContent          = `${stats.avgLatency}ms`;
+  document.getElementById('metricTokens').textContent       = stats.avgTokens;
 }
 
 /** Hide the summary section (reset before a new run). */
 export function hideSummary() {
   document.getElementById('summarySection').classList.add('hidden');
-}
-
-// ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
-
-function escapeHtml(str = '') {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function copyToClipboard(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
-    const original = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = original; }, 1500);
-  });
 }
 
 // ─── OLLAMA STATUS INDICATOR ─────────────────────────────────────────────────
@@ -239,7 +270,6 @@ function copyToClipboard(text, btn) {
  */
 export function setOllamaStatus(state, detail = '') {
   const pill  = document.getElementById('ollamaStatusPill');
-  const dot   = document.getElementById('ollamaStatusDot');
   const label = document.getElementById('ollamaStatusLabel');
   const sub   = document.getElementById('ollamaStatusSub');
   if (!pill) return;
@@ -257,4 +287,18 @@ export function setOllamaStatus(state, detail = '') {
 
   label.textContent = labels[state] ?? state;
   if (sub) sub.textContent = detail;
+}
+
+// ─── INTERNAL HELPERS ────────────────────────────────────────────────────────
+
+function escapeHtml(str = '') {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
 }

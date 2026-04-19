@@ -1,29 +1,28 @@
 /**
  * server.js  —  Dev server + Ollama lifecycle manager
  *
- * Replaces the plain `python3 -m http.server` from v1.
  * Run with:  node server.js
  *
- * What it does:
- *   1. Serves all static files (index.html, css/, js/) from this directory
- *   2. Exposes two API routes the browser calls before evaluation:
- *        GET  /api/ollama/health  →  { running: bool, models: string[] }
- *        POST /api/ollama/start   →  spawns `ollama serve` if not already up
- *   3. Proxies /v1/* to Ollama (avoids CORS issues in the browser)
+ * Routes:
+ *   GET  /api/ollama/health  →  { running: bool, models: string[] }
+ *   GET  /api/ollama/models  →  { models: OllamaModel[] }   ← NEW
+ *   POST /api/ollama/start   →  spawns `ollama serve` if not already up
+ *   /v1/*                    →  proxied to Ollama (no CORS issues in the browser)
+ *   everything else          →  static file server
  *
  * No npm install required — uses only Node.js built-in modules.
  *
  * Requirements:
- *   - Node.js 18+  (uses native fetch + fs/promises)
- *   - `ollama` must be on PATH  (brew install ollama / https://ollama.com)
+ *   - Node.js 18+
+ *   - `ollama` on PATH
  */
 
-import http       from 'node:http';
-import https      from 'node:https';
-import fs         from 'node:fs';
-import path       from 'node:path';
-import { spawn }  from 'node:child_process';
-import { URL }    from 'node:url';
+import http             from 'node:http';
+import https            from 'node:https';
+import fs               from 'node:fs';
+import path             from 'node:path';
+import { spawn }        from 'node:child_process';
+import { URL }          from 'node:url';
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
@@ -50,7 +49,7 @@ let ollamaProcess = null;
 
 /**
  * Ping Ollama's /api/tags endpoint (the lightest available health check).
- * Returns { running: true, models: ['llama3.2', ...] }  or  { running: false }
+ * @returns {{ running: boolean, models?: string[] }}
  */
 async function checkOllamaHealth() {
   try {
@@ -62,6 +61,58 @@ async function checkOllamaHealth() {
   } catch {
     return { running: false };
   }
+}
+
+// ─── MODEL LIST ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the full model list from Ollama's /api/tags endpoint.
+ *
+ * Each model entry from Ollama looks like:
+ *   { name, model, modified_at, size, digest, details: { family, parameter_size, ... } }
+ *
+ * We return a cleaned-up shape the browser can use directly:
+ *   { id, label, family, parameterSize, sizeGb }
+ *
+ * @returns {{ models: Array<{ id, label, family, parameterSize, sizeGb }> }}
+ */
+async function listOllamaModels() {
+  const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: AbortSignal.timeout(4000) });
+  if (!res.ok) throw new Error(`Ollama /api/tags returned HTTP ${res.status}`);
+
+  const data = await res.json();
+  const raw  = data.models ?? [];
+
+  const models = raw.map(m => {
+    // name is e.g. "llama3.2:latest" or "llama3.2:3b"
+    const id           = m.name;
+    const baseName     = id.split(':')[0];                           // "llama3.2"
+    const tag          = id.includes(':') ? id.split(':')[1] : '';  // "latest"
+    const family       = m.details?.family ?? baseName;
+    const paramSize    = m.details?.parameter_size ?? '';
+    const sizeGb       = m.size ? (m.size / 1e9).toFixed(1) : null;
+
+    // Build a human-friendly label: "Llama 3.2" or "Llama 3.2 · 3B"
+    const friendlyBase = baseName
+      .replace(/([a-z])(\d)/g,  '$1 $2')   // "llama3" → "llama 3"
+      .replace(/(\d)([a-z])/gi, '$1 $2')   // "3b" → "3 b"  (handled below)
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase())
+      .trim();
+
+    const tagSuffix = tag && tag !== 'latest'
+      ? ` · ${tag.toUpperCase()}`
+      : (paramSize ? ` · ${paramSize}` : '');
+
+    const label = friendlyBase + tagSuffix;
+
+    return { id, label, family, parameterSize: paramSize, sizeGb };
+  });
+
+  // Sort alphabetically by label
+  models.sort((a, b) => a.label.localeCompare(b.label));
+
+  return { models };
 }
 
 // ─── AUTO-START ───────────────────────────────────────────────────────────────
@@ -120,9 +171,9 @@ async function startOllama() {
  * This eliminates all CORS issues — the browser only ever talks to our server.
  */
 function proxyToOllama(req, res) {
-  const target     = new URL(`${OLLAMA_BASE}${req.url}`);
-  const isHttps    = target.protocol === 'https:';
-  const transport  = isHttps ? https : http;
+  const target    = new URL(`${OLLAMA_BASE}${req.url}`);
+  const isHttps   = target.protocol === 'https:';
+  const transport = isHttps ? https : http;
 
   const options = {
     hostname: target.hostname,
@@ -183,7 +234,7 @@ async function serveStatic(req, res) {
 const server = http.createServer(async (req, res) => {
   const { method, url } = req;
 
-  // ── CORS pre-flight ───────────────────────────────────────────────────────
+  // CORS pre-flight
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin':  '*',
@@ -193,13 +244,23 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // ── API: health check ─────────────────────────────────────────────────────
+  // GET /api/ollama/health
   if (method === 'GET' && url === '/api/ollama/health') {
     const health = await checkOllamaHealth();
     return jsonResponse(res, 200, health);
   }
 
-  // ── API: start Ollama ─────────────────────────────────────────────────────
+  // GET /api/ollama/models
+  if (method === 'GET' && url === '/api/ollama/models') {
+    try {
+      const result = await listOllamaModels();
+      return jsonResponse(res, 200, result);
+    } catch (err) {
+      return jsonResponse(res, 503, { error: err.message });
+    }
+  }
+
+  // POST /api/ollama/start
   if (method === 'POST' && url === '/api/ollama/start') {
     try {
       const health = await startOllama();
@@ -209,12 +270,12 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // ── Proxy: forward /v1/* to Ollama ────────────────────────────────────────
+  // Proxy /v1/* → Ollama
   if (url.startsWith('/v1/')) {
     return proxyToOllama(req, res);
   }
 
-  // ── Static files ──────────────────────────────────────────────────────────
+  // Static files
   await serveStatic(req, res);
 });
 
@@ -249,10 +310,9 @@ function sleep(ms) {
 }
 
 function jsonResponse(res, status, body) {
-  const payload = JSON.stringify(body);
   res.writeHead(status, {
-    'Content-Type':                 'application/json',
-    'Access-Control-Allow-Origin':  '*',
+    'Content-Type':                'application/json',
+    'Access-Control-Allow-Origin': '*',
   });
-  res.end(payload);
+  res.end(JSON.stringify(body));
 }

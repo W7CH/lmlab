@@ -1,63 +1,48 @@
 /**
  * config.js
  *
- * Central configuration for LMLab.
- * This is the ONLY file you need to edit to add/remove models or prompts.
+ * Static configuration only.
+ * Ollama models are now discovered automatically at runtime via `ollama list`.
+ * The only models you need to declare here are cloud/remote ones (Gemini, etc.)
+ * that cannot be discovered locally.
  */
 
-// ─── MODEL REGISTRY ───────────────────────────────────────────────────────────
-// Each entry represents one model available for evaluation.
-//
-// Fields:
-//   id       – exact model string passed to the API (must match `ollama list`)
-//   label    – display name shown in the UI
-//   backend  – "ollama" | "gemini"
-//   color    – accent color used in the timing chart
-//   active   – whether the model is selected by default
+// ─── GEMINI (and other remote) MODELS ────────────────────────────────────────
+// These are merged with the auto-discovered Ollama models at page load.
+// Add any Gemini model IDs you want to evaluate here.
 
-export const MODELS = [
-  {
-    id:      'llama3.2',
-    label:   'Llama 3.2',
-    backend: 'ollama',
-    color:   '#a78bfa',
-    active:  true,
-  },
-  {
-    id:      'qwen3.5:2b',
-    label:   'Qwen 3.5',
-    backend: 'ollama',
-    color:   '#60a5fa',
-    active:  false,
-  },
-  {
-    id:      'gemma3:4b',
-    label:   'Gemma 3',
-    backend: 'ollama',
-    color:   '#f472b6',
-    active:  true,
-  },
-  {
-    id:      'phi3',
-    label:   'Phi-3',
-    backend: 'ollama',
-    color:   '#34d399',
-    active:  false,
-  },
-  {
-    id:      'deepseek-r1:1.5b',
-    label:   'DeepSeek-R1',
-    backend: 'ollama',
-    color:   '#fb923c',
-    active:  false,
-  },
+export const GEMINI_MODELS = [
   {
     id:      'gemini-2.0-flash-lite',
     label:   'Gemini 2.0 Flash Lite',
     backend: 'gemini',
-    color:   '#6c8bff',
-    active:  true,
+    active:  false,
   },
+  {
+    id:      'gemini-1.5-flash',
+    label:   'Gemini 1.5 Flash',
+    backend: 'gemini',
+    active:  false,
+  },
+];
+
+// ─── CHART COLOR PALETTE ──────────────────────────────────────────────────────
+// Colors are assigned to models in order (Ollama first, then Gemini).
+// If there are more models than colors, the palette wraps around.
+
+export const CHART_COLORS = [
+  '#a78bfa', // violet
+  '#60a5fa', // blue
+  '#34d399', // emerald
+  '#fb923c', // orange
+  '#f472b6', // pink
+  '#facc15', // yellow
+  '#38bdf8', // sky
+  '#f87171', // red
+  '#4ade80', // green
+  '#c084fc', // purple
+  '#fb7185', // rose
+  '#67e8f9', // cyan
 ];
 
 // ─── PROMPT PRESETS ───────────────────────────────────────────────────────────
@@ -79,8 +64,8 @@ export const PRESETS = {
 };
 
 // ─── DEFAULT API PARAMETERS ───────────────────────────────────────────────────
+
 export const DEFAULTS = {
   temperature: 0.7,
   maxTokens:   1024,
-  ollamaUrl:   'http://localhost:11434',
 };

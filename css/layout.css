@@ -50,6 +50,10 @@ header {
   flex-shrink:      0;
 }
 
+.logo-icon svg {
+  filter: drop-shadow(0 0 8px rgba(108, 139, 255, 0.4));
+}
+
 .logo h1    { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
 .logo span  { color: var(--muted); font-size: 12px; }
 

@@ -1,19 +1,12 @@
 /**
  * ollama.js
  *
- * Browser-side Ollama lifecycle helpers.
+ * Browser-side Ollama lifecycle + model-discovery helpers.
  *
- * All real work (process spawning, port polling) happens in server.js.
- * This module is a thin client that talks to server.js's two API routes:
- *
+ * Server routes consumed here:
  *   GET  /api/ollama/health  →  { running: bool, models: string[] }
- *   POST /api/ollama/start   →  starts ollama serve, polls until ready,
- *                                then returns the same health shape
- *
- * The three exported functions are called from eval.js in sequence:
- *   1. checkHealth()       — fast ping, used on page load + before every run
- *   2. requestStart()      — ask the server to spawn `ollama serve`
- *   3. waitUntilReady()    — poll health until Ollama responds or we time out
+ *   GET  /api/ollama/models  →  { models: OllamaModel[] }
+ *   POST /api/ollama/start   →  starts ollama serve, polls until ready
  */
 
 // How long to wait before declaring Ollama unreachable (ms)
@@ -21,7 +14,7 @@ const START_TIMEOUT_MS  = 20_000;
 // How often to re-check while waiting for Ollama to boot (ms)
 const POLL_INTERVAL_MS  =    800;
 
-// ─── PUBLIC API ───────────────────────────────────────────────────────────────
+// ─── HEALTH ───────────────────────────────────────────────────────────────────
 
 /**
  * Ping the server's health route.
@@ -29,9 +22,7 @@ const POLL_INTERVAL_MS  =    800;
  */
 export async function checkHealth() {
   try {
-    const res = await fetch('/api/ollama/health', {
-      signal: AbortSignal.timeout(3000),
-    });
+    const res = await fetch('/api/ollama/health', { signal: AbortSignal.timeout(3000) });
     if (!res.ok) return { running: false };
     return res.json();
   } catch {
@@ -39,12 +30,34 @@ export async function checkHealth() {
   }
 }
 
+// ─── MODEL DISCOVERY ─────────────────────────────────────────────────────────
+
 /**
- * Ask server.js to start `ollama serve` and wait until it is ready.
- * The server does the polling; this just awaits its response.
+ * Fetch the list of locally installed Ollama models from the server.
  *
+ * Returns an array of model descriptors ready to merge into the full model list:
+ *   { id, label, family, parameterSize, sizeGb }
+ *
+ * Throws if Ollama is not running or the request fails.
+ *
+ * @returns {Promise<Array<{ id: string, label: string, family: string,
+ *                           parameterSize: string, sizeGb: string|null }>>}
+ */
+export async function fetchOllamaModels() {
+  const res = await fetch('/api/ollama/models', { signal: AbortSignal.timeout(5000) });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Failed to fetch model list (HTTP ${res.status})`);
+  }
+  const data = await res.json();
+  return data.models ?? [];
+}
+
+// ─── AUTO-START ───────────────────────────────────────────────────────────────
+
+/**
+ * Ask server.js to start `ollama serve` and block until it is ready.
  * @returns {Promise<{ running: boolean, models?: string[] }>}
- * @throws  {Error} if the server reports a start failure
  */
 export async function requestStart() {
   const res = await fetch('/api/ollama/start', {
@@ -62,13 +75,11 @@ export async function requestStart() {
 }
 
 /**
- * Ensure Ollama is running before a run:
- *   1. Check health — if already up, return immediately.
- *   2. If down, call requestStart() which blocks until Ollama is ready.
- *   3. If start fails or times out, throw with a user-friendly message.
+ * Ensure Ollama is running. If it isn't, auto-start it via the server.
+ * Calls onStatusUpdate(msg) with human-readable progress strings.
  *
- * @param {function(string): void} onStatusUpdate  — callback for live status messages
- * @returns {Promise<{ running: boolean, models: string[] }>}
+ * @param {(msg: string) => void} onStatusUpdate
+ * @returns {Promise<{ running: boolean, models?: string[] }>}
  */
 export async function ensureOllamaRunning(onStatusUpdate = () => {}) {
   onStatusUpdate('Checking Ollama…');
@@ -79,7 +90,6 @@ export async function ensureOllamaRunning(onStatusUpdate = () => {}) {
     return health;
   }
 
-  // Not running — ask the server to start it
   onStatusUpdate('Ollama is not running. Starting it now…');
 
   try {
@@ -94,24 +104,22 @@ export async function ensureOllamaRunning(onStatusUpdate = () => {}) {
   }
 }
 
+// ─── POLLING ─────────────────────────────────────────────────────────────────
+
 /**
- * Continuously poll health until Ollama is up or the timeout expires.
- * Used by the sidebar status indicator for live feedback.
- *
- * @param {function({ running: boolean, models?: string[] }): void} onUpdate
+ * Poll health continuously until Ollama is up or the timeout expires.
+ * @param {(health: object) => void} onUpdate
  * @param {number} [timeoutMs]
- * @returns {Promise<boolean>}  resolves true if Ollama came up, false on timeout
+ * @returns {Promise<boolean>}
  */
 export async function pollUntilReady(onUpdate, timeoutMs = START_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
-
   while (Date.now() < deadline) {
     const health = await checkHealth();
     onUpdate(health);
     if (health.running) return true;
     await sleep(POLL_INTERVAL_MS);
   }
-
   return false;
 }
 
