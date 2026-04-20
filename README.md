@@ -24,11 +24,13 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ★ Ollama is automatically checked and started before each run. A live status indicator in the sidebar shows whether Ollama is running, and `server.js` will spawn `ollama serve` for you if it isn't.
 
-★ Ollama models are **auto-discovered at runtime**  — no more maintaining a manual list. The dashboard queries Ollama's `/api/tags` endpoint (`ollama list`), builds a friendly model list with size badges (e.g. `3.8 GB`), and assigns colors automatically. A `↺` re-check button lets you pick up newly pulled models without restarting. Skeleton loading states and error messages are shown while discovery is in flight.
+★ Ollama models are **auto-discovered at runtime** — no more maintaining a manual list. The dashboard queries Ollama's `/api/tags` endpoint (`ollama list`), builds a friendly model list with size badges (e.g. `3.8 GB`), and assigns colors automatically. A `↺` re-check button lets you pick up newly pulled models without restarting. Skeleton loading states and error messages are shown while discovery is in flight.
 
 ★ **Anthropic** and **OpenAI** are now first-class backends. Add your API keys in the sidebar and run GPT-4o, o1-mini, Claude Haiku, Sonnet, and Opus side-by-side with your local Ollama models. Anthropic calls are proxied through `server.js` to work around CORS. Latency display is normalized to seconds across all backends.
 
 ★ **Light/dark theme support:** A toggle button in the header switches between themes, persisted to `localStorage` and respecting `prefers-color-scheme` on first visit. Theme switching is zero-flash: `initTheme()` runs before the first render, syntax highlighting swaps instantly via a `<link>` href swap, and icon visibility is pure CSS — no JavaScript class manipulation needed.
+
+★ **Provider chips and model filtering:** API key fields are now hidden behind collapsible pill buttons (Gemini, Anthropic, OpenAI) — open only what you use. A filter bar above the model list lets you narrow to a single backend at a glance. Both selections persist across sessions via `localStorage` and survive Ollama re-checks.
 
 ---
 
@@ -248,6 +250,9 @@ The `o1` model family does not accept a `temperature` parameter. This is handled
 
 - **Anthropic calls fail / CORS error:**
 Make sure you are running `server.js` and accessing the dashboard via `http://localhost:8080`. Direct file access (`file://`) bypasses the proxy.
+
+- **Model list shows "No X models available":**
+The filter bar is set to a backend with no models in the list. Either switch the filter back to **All**, add models for that backend in `js/config.js` (for cloud providers), or pull an Ollama model and click `↺`.
 
 - **Theme flashes wrong color on load:**
 This should not happen — `initTheme()` runs before the first render. If you see a flash, check that your browser is not overriding `localStorage` or blocking the inline script. Clearing `localStorage` resets the preference to the OS default (`prefers-color-scheme`).

@@ -3,18 +3,24 @@
  *
  * Boot sequence:
  *   1. Initialise theme from localStorage (before first paint — no flash)
- *   2. Render static UI (presets, parameter defaults, tab wiring)
- *   3. Show model list skeleton while discovery is in flight
- *   4. Health-check Ollama + fetch model list
- *   5. Merge Ollama models with Gemini / OpenAI / Anthropic static lists
- *   6. Assign chart colors and render the model toggle list
- *   7. Re-check + refresh model list when ↺ is clicked
+ *   2. Render prompt presets + parameter defaults
+ *   3. Restore provider chip state from localStorage
+ *   4. Restore model filter state from localStorage
+ *   5. Wire all buttons (run, tabs, Ollama re-check, theme, chips, filter)
+ *   6. Kick off Ollama health check + model discovery
+ *   7. Merge Ollama models with static model lists
+ *   8. Assign chart colors and render the model toggle list
  */
 
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
-import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
+import { renderModelList, renderPresets, setOllamaStatus, setModelListState, applyModelFilter } from './ui.js';
 import { checkHealth, fetchOllamaModels } from './ollama.js';
 import { runEval } from './eval.js';
+
+// ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
+const KEY_THEME    = 'llm-eval-theme';
+const KEY_PROVIDERS = 'llm-eval-providers';   // JSON array of active provider ids
+const KEY_FILTER   = 'llm-eval-model-filter'; // active backend filter string
 
 // ─── LIVE STATE ───────────────────────────────────────────────────────────────
 
@@ -59,11 +65,105 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.classList.remove('spinning');
   });
 
+  // Theme toggle
   document.getElementById('themeBtn')?.addEventListener('click', toggleTheme);
 
-  // Kick off discovery immediately
+  // Provider chips (API Keys section)
+  initProviderChips();
+
+  // Model filter bar
+  initModelFilter();
+
+  // Discover models
   refreshModels();
 });
+
+// ─── PROVIDER CHIPS (API KEYS) ────────────────────────────────────────────────
+
+/**
+ * Each chip toggles its matching key panel.
+ * Active providers are persisted to localStorage.
+ *
+ * Chip state: aria-pressed="true|false"
+ * Panel visibility: the [hidden] attribute
+ */
+function initProviderChips() {
+  const saved = loadProviders();
+
+  document.querySelectorAll('.provider-chip').forEach(chip => {
+    const provider = chip.dataset.provider;
+    const isActive = saved.has(provider);
+
+    setChipActive(chip, isActive);
+
+    chip.addEventListener('click', () => {
+      const nowActive = chip.getAttribute('aria-pressed') !== 'true';
+      setChipActive(chip, nowActive);
+      saveProviders();
+    });
+  });
+}
+
+function setChipActive(chip, active) {
+  const provider = chip.dataset.provider;
+  chip.setAttribute('aria-pressed', String(active));
+  chip.classList.toggle('active', active);
+
+  const panel = document.getElementById(`keyPanel-${provider}`);
+  if (panel) panel.hidden = !active;
+}
+
+function loadProviders() {
+  try {
+    const raw = localStorage.getItem(KEY_PROVIDERS);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveProviders() {
+  const active = [...document.querySelectorAll('.provider-chip[aria-pressed="true"]')]
+    .map(c => c.dataset.provider);
+  localStorage.setItem(KEY_PROVIDERS, JSON.stringify(active));
+}
+
+// ─── MODEL FILTER BAR ─────────────────────────────────────────────────────────
+
+/**
+ * Single-select filter that shows only models from a given backend.
+ * "all" reveals everything.
+ *
+ * The active filter is persisted to localStorage and re-applied after
+ * every refreshModels() call so it survives Ollama re-checks.
+ */
+function initModelFilter() {
+  const saved = localStorage.getItem(KEY_FILTER) ?? 'all';
+
+  document.querySelectorAll('.model-filter-btn').forEach(btn => {
+    if (btn.dataset.backend === saved) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.model-filter-btn')
+        .forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const backend = btn.dataset.backend;
+      localStorage.setItem(KEY_FILTER, backend);
+      applyModelFilter(backend);
+    });
+  });
+}
+
+/** Re-apply the persisted filter (called after renderModelList rebuilds the DOM). */
+function reapplyModelFilter() {
+  const backend = localStorage.getItem(KEY_FILTER) ?? 'all';
+  applyModelFilter(backend);
+}
 
 // ─── MODEL DISCOVERY + REFRESH ───────────────────────────────────────────────
 
@@ -77,6 +177,7 @@ async function refreshModels() {
     setOllamaStatus('stopped', 'Will auto-start on Run');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    reapplyModelFilter();
     return;
   }
 
@@ -90,11 +191,13 @@ async function refreshModels() {
     );
     allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    reapplyModelFilter();
   } catch (err) {
     setOllamaStatus('error', err.message);
     setModelListState('error', 'Could not load model list');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    reapplyModelFilter();
   }
 }
 
@@ -113,34 +216,27 @@ function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModel
       active:  false,
       meta:    { family: m.family, parameterSize: m.parameterSize, sizeGb: m.sizeGb },
     })),
-    ...geminiModels.map(m   => ({ ...m, active: m.active   ?? false })),
-    ...openaiModels.map(m   => ({ ...m, active: m.active   ?? false })),
-    ...anthropicModels.map(m => ({ ...m, active: m.active  ?? false })),
+    ...geminiModels.map(m    => ({ ...m, active: m.active    ?? false })),
+    ...openaiModels.map(m    => ({ ...m, active: m.active    ?? false })),
+    ...anthropicModels.map(m => ({ ...m, active: m.active    ?? false })),
   ];
-
   return merged.map((m, i) => ({ ...m, color: CHART_COLORS[i % CHART_COLORS.length] }));
 }
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'llm-eval-theme';
-const HLJS_DARK   = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
-const HLJS_LIGHT  = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
+const HLJS_DARK  = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
+const HLJS_LIGHT = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
 
-/**
- * Read the saved theme from localStorage (or fall back to OS preference),
- * then apply it. Call before any rendering to prevent a theme flash.
- */
 function initTheme() {
-  const saved  = localStorage.getItem(STORAGE_KEY);
+  const saved  = localStorage.getItem(KEY_THEME);
   const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyTheme(saved ?? (osDark ? 'dark' : 'light'));
 }
 
 /** Flip between dark and light and persist the choice. */
 function toggleTheme() {
-  const current = document.documentElement.dataset.theme ?? 'dark';
-  applyTheme(current === 'dark' ? 'light' : 'dark');
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 }
 
 /**
@@ -152,10 +248,8 @@ function toggleTheme() {
  */
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-
-  // Swap the highlight.js theme stylesheet
-  const hljsLink = document.getElementById('hljs-theme');
-  if (hljsLink) hljsLink.href = theme === 'dark' ? HLJS_DARK : HLJS_LIGHT;
+  const link = document.getElementById('hljs-theme');
+  if (link) link.href = theme === 'dark' ? HLJS_DARK : HLJS_LIGHT;
 
   // Re-highlight any code blocks already in the DOM
   if (typeof hljs !== 'undefined') {
@@ -164,8 +258,7 @@ function applyTheme(theme) {
       hljs.highlightElement(block);
     });
   }
-
-  localStorage.setItem(STORAGE_KEY, theme);
+  localStorage.setItem(KEY_THEME, theme);
 }
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
@@ -174,14 +267,9 @@ const TAB_IDS = ['results', 'compare', 'chart'];
 
 function switchTab(name) {
   TAB_IDS.forEach(t => {
-    const panel = document.getElementById(`tab${capitalise(t)}`);
-    if (panel) panel.classList.toggle('hidden', t !== name);
+    document.getElementById(`tab${t[0].toUpperCase()}${t.slice(1)}`)
+      ?.classList.toggle('hidden', t !== name);
   });
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === name);
-  });
-}
-
-function capitalise(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  document.querySelectorAll('.tab-btn')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
 }

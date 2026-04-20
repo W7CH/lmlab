@@ -9,14 +9,7 @@
 
 /**
  * Convert milliseconds to a human-readable seconds string.
- * Examples:  312  → "0.31s"
- *           1840  → "1.84s"
- *          12500  → "12.5s"
- *
- * Rules:
- *   < 10 s  → 2 decimal places  ("1.84s")
- *   ≥ 10 s  → 1 decimal place   ("12.5s")
- *
+ *   312  → "0.31s"   1840 → "1.84s"   12500 → "12.5s"
  * @param {number} ms
  * @returns {string}
  */
@@ -34,10 +27,10 @@ export function setStatus(type, message) {
   text.textContent = message;
 }
 
-// ─── MODEL TOGGLE LIST ────────────────────────────────────────────────────────
+// ─── MODEL LIST ───────────────────────────────────────────────────────────────
 
 /**
- * Show a transient loading / error state inside the model list container.
+ * Show a skeleton or error inside the model list container while loading.
  * @param {'loading'|'error'} state
  * @param {string} [message]
  */
@@ -65,8 +58,11 @@ export function setModelListState(state, message = '') {
 }
 
 /**
- * Render the full model toggle list.
- * Returns a Set<string> of active model IDs, mutated on click.
+ * Render the model toggle list.
+ * Returns a Set<string> of currently-active model IDs (mutated on click).
+ *
+ * Each item is given data-backend so the filter bar can show/hide groups
+ * without touching selection state.
  *
  * @param {Array}       models
  * @param {HTMLElement} container
@@ -79,15 +75,18 @@ export function renderModelList(models, container) {
 
   if (models.length === 0) {
     container.innerHTML = `
-      <div class="model-list-empty">No models found. Run <code>ollama pull &lt;model&gt;</code> to install one.</div>
+      <div class="model-list-empty">
+        No models found. Run <code>ollama pull &lt;model&gt;</code> to install one.
+      </div>
     `;
     return selected;
   }
 
   models.forEach(m => {
     const item = document.createElement('div');
-    item.className  = `model-item${selected.has(m.id) ? ' active' : ''}`;
-    item.dataset.id = m.id;
+    item.className        = `model-item${selected.has(m.id) ? ' active' : ''}`;
+    item.dataset.id       = m.id;
+    item.dataset.backend  = m.backend;   // used by applyModelFilter()
 
     // Size badge — only for Ollama models that have size info
     const sizeBadge = m.meta?.sizeGb
@@ -115,6 +114,36 @@ export function renderModelList(models, container) {
   });
 
   return selected;
+}
+
+/**
+ * Show only model items that match the given backend, hide the rest.
+ * Preserves selection state — a hidden item stays selected.
+ * Pass "all" to reveal every item.
+ *
+ * @param {string} backend  — "all" | "ollama" | "gemini" | "anthropic" | "openai"
+ */
+export function applyModelFilter(backend) {
+  const items = document.querySelectorAll('#modelList .model-item');
+  items.forEach(item => {
+    const matches = backend === 'all' || item.dataset.backend === backend;
+    item.style.display = matches ? '' : 'none';
+  });
+
+  // Show a hint if the active filter returns zero visible items
+  const container = document.getElementById('modelList');
+  const anyVisible = [...items].some(i => i.style.display !== 'none');
+  let hint = container.querySelector('.model-filter-empty');
+  if (!anyVisible && items.length > 0) {
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.className = 'model-filter-empty model-list-empty';
+      container.appendChild(hint);
+    }
+    hint.textContent = `No ${backend} models available.`;
+  } else if (hint) {
+    hint.remove();
+  }
 }
 
 // ─── PRESET BUTTONS ───────────────────────────────────────────────────────────

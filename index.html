@@ -14,8 +14,7 @@
   />
 
   <!-- Syntax highlighting.
-       id="hljs-theme" is updated by applyTheme() in main.js when the user
-       toggles themes — the href is swapped between atom-one-dark and atom-one-light. -->
+       id="hljs-theme" href is swapped by applyTheme() in main.js. -->
   <link
     id="hljs-theme"
     rel="stylesheet"
@@ -99,27 +98,30 @@
         </div>
       </div>
 
-      <!-- API Keys -->
+      <!-- ── API KEYS ────────────────────────────────────────────────── -->
       <div>
         <div class="section-label">API Keys</div>
-        <div class="apikey-box">
-          <label for="geminiKeyInput">Google (Gemini)</label>
-          <div class="apikey-row">
-            <input type="password" id="geminiKeyInput" placeholder="AIzaSy…" />
-          </div>
+
+        <!-- Provider chip selector — multi-select, each chip reveals its key panel -->
+        <div class="provider-chips" id="providerChips">
+          <button class="provider-chip" data-provider="gemini"    aria-pressed="false">Gemini</button>
+          <button class="provider-chip" data-provider="anthropic" aria-pressed="false">Anthropic</button>
+          <button class="provider-chip" data-provider="openai"    aria-pressed="false">OpenAI</button>
         </div>
-        <div class="apikey-box" style="margin-top: 6px;">
-          <label for="anthropicKeyInput">Anthropic (Claude)</label>
-          <div class="apikey-row">
-            <input type="password" id="anthropicKeyInput" placeholder="sk-ant-…" />
-          </div>
+
+        <!-- Key panels — one per provider, hidden until its chip is active -->
+        <div class="key-panel" id="keyPanel-gemini" data-provider="gemini" hidden>
+          <label for="geminiKeyInput">Google API key</label>
+          <input type="password" id="geminiKeyInput" placeholder="AIzaSy…" autocomplete="off" />
         </div>
-        <div class="apikey-box" style="margin-top: 6px;">
-          <label for="openaiKeyInput">OpenAI (GPT)</label>
-          <div class="apikey-row">
-            <input type="password" id="openaiKeyInput" placeholder="sk-…" />
-          </div>
         </div>
+        <div class="key-panel" id="keyPanel-anthropic" data-provider="anthropic" hidden>
+          <label for="anthropicKeyInput">Anthropic API key</label>
+          <input type="password" id="anthropicKeyInput" placeholder="sk-ant-…" autocomplete="off" />
+        </div>
+        <div class="key-panel" id="keyPanel-openai" data-provider="openai" hidden>
+          <label for="openaiKeyInput">OpenAI API key</label>
+          <input type="password" id="openaiKeyInput" placeholder="sk-…" autocomplete="off" />
       </div>
 
       <!-- Ollama status indicator -->
@@ -150,12 +152,21 @@
         </div>
       </div>
 
-      <!-- Model toggles -->
+      <!-- ── MODELS ──────────────────────────────────────────────────── -->
       <div>
         <div class="section-label">Models</div>
-        <div class="model-list" id="modelList">
-          <!-- Injected by ui.js → renderModelList() -->
+
+        <!-- Backend filter bar — single-select, "all" shows everything -->
+        <div class="model-filter-bar" id="modelFilterBar">
+          <button class="model-filter-btn active" data-backend="all">All</button>
+          <button class="model-filter-btn" data-backend="ollama">ollama</button>
+          <button class="model-filter-btn" data-backend="gemini">gemini</button>
+          <button class="model-filter-btn" data-backend="anthropic">anthropic</button>
+          <button class="model-filter-btn" data-backend="openai">openai</button>
         </div>
+
+        <!-- Model toggles — injected by ui.js → renderModelList() -->
+        <div class="model-list" id="modelList"></div>
       </div>
 
       <!-- Run button -->
@@ -165,7 +176,7 @@
 
     </aside><!-- /sidebar -->
 
-    <!-- ── CONTENT AREA ─────────────────────────────────────────────────── -->
+    <!-- ── CONTENT AREA ─────────────────────────────────────────────── -->
     <main class="content">
 
       <!-- Status bar -->
@@ -184,7 +195,6 @@
             <button class="tab-btn"        data-tab="chart">Timing Chart</button>
           </div>
         </div>
-
         <div class="summary-grid">
           <div class="metric-card">
             <div class="metric-label">Models run</div>
