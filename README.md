@@ -22,7 +22,7 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ## What's new?
 
-★ Ollama is automatically checked and started before each run. A live status indicator in the sidebar shows whether Ollama is running, and `server.js` will spawn `ollama serve` for you if it isn't.
+★ Ollama is automatically checked and started before each run. A live status indicator in the sidebar shows whether Ollama is running, and `server.js` will spawn `ollama serve` for you if it isn't. The **↺** button in the sidebar also triggers a start attempt directly — if Ollama is down it will try to bring it up, populate the model list on success, or surface the exact error on failure (e.g. "`ollama` not found on PATH"). The button is disabled while a start is in progress to prevent concurrent attempts.
 
 ★ Ollama models are **auto-discovered at runtime** — no more maintaining a manual list. The dashboard queries Ollama's `/api/tags` endpoint (`ollama list`), builds a friendly model list with size badges (e.g. `3.8 GB`), and assigns colors automatically. A `↺` re-check button lets you pick up newly pulled models without restarting. Skeleton loading states and error messages are shown while discovery is in flight.
 
@@ -236,11 +236,11 @@ export const DEFAULTS = {
 
 ## Troubleshooting
 
-- **`ollama: command not found`:**
-Install Ollama from [ollama.com](https://ollama.com/download) and make sure it's on your `PATH`.
+- **Ollama fails to start — error shown in sidebar:**
+If `ollama serve` cannot be launched, the exact error message is displayed in the status indicator (e.g. "`ollama` not found on `PATH`"). Install Ollama from [ollama.com](https://ollama.com/download), make sure it is on your PATH, then click `↺` to retry.
 
 - **Ollama starts but no models appear:**
-Run `ollama list` to confirm models are pulled. Click the `↺` button in the sidebar to re-run discovery. Models must be pulled before the server starts, or re-checked after pulling.
+Run `ollama list` to confirm models are pulled. Click `↺` to re-run discovery. Models must be pulled before they can appear in the dashboard.
 
 - **Gemini / OpenAI / Anthropic returns 401:**
 Your API key is missing or invalid. Check the corresponding key field in the sidebar.

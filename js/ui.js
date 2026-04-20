@@ -292,6 +292,7 @@ export function setOllamaStatus(state, detail = '') {
   const labels = {
     unknown:  'Unknown',
     checking: 'Checking…',
+    starting: 'Starting…',
     running:  'Running',
     stopped:  'Not running',
     error:    'Error',

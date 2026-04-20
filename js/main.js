@@ -14,7 +14,7 @@
 
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState, applyModelFilter } from './ui.js';
-import { checkHealth, fetchOllamaModels } from './ollama.js';
+import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
 import { runEval } from './eval.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
@@ -57,12 +57,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // Re-check / refresh button
+  // Ollama ↺ button:
+  //   • If Ollama is already running  → refresh the model list (fast check)
+  //   • If Ollama is not running      → attempt to start it, then refresh
   document.getElementById('ollamaCheckBtn')?.addEventListener('click', async e => {
     const btn = e.currentTarget;
     btn.classList.add('spinning');
-    await refreshModels();
+    btn.disabled = true;
+    await attemptStartOllama();
     btn.classList.remove('spinning');
+    btn.disabled = false;
   });
 
   // Theme toggle
@@ -165,6 +169,43 @@ function reapplyModelFilter() {
   applyModelFilter(backend);
 }
 
+// ─── OLLAMA START + REFRESH ──────────────────────────────────────────────────
+
+/**
+ * Called when the user explicitly clicks ↺.
+ *
+ * Logic:
+ *   1. Check health first (cheap — avoids a 15 s wait if Ollama is already up)
+ *   2. If already running  → just refresh the model list and return
+ *   3. If not running      → call requestStart() which asks server.js to spawn
+ *      `ollama serve` and blocks (up to 15 s) until it is ready
+ *   4. On success          → refresh the model list so the new Ollama models appear
+ *   5. On failure          → show an actionable error with the server's message
+ */
+async function attemptStartOllama() {
+  setOllamaStatus('checking', 'Checking Ollama…');
+
+  const health = await checkHealth();
+
+  if (health.running) {
+    // Already up — just refresh the model list
+    await refreshModels();
+    return;
+  }
+
+  // Not running — try to start it
+  setOllamaStatus('checking', 'Starting ollama serve…');
+
+  try {
+    await requestStart();
+    // requestStart() blocks until Ollama is ready, so we can refresh immediately
+    await refreshModels();
+  } catch (err) {
+    // Surface the server's error message so the user knows what to do
+    setOllamaStatus('error', err.message);
+  }
+}
+
 // ─── MODEL DISCOVERY + REFRESH ───────────────────────────────────────────────
 
 async function refreshModels() {
@@ -174,7 +215,7 @@ async function refreshModels() {
   const health = await checkHealth();
 
   if (!health.running) {
-    setOllamaStatus('stopped', 'Will auto-start on Run');
+    setOllamaStatus('stopped', 'Click ↺ to start · or auto-starts on Run');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
     reapplyModelFilter();
