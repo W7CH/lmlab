@@ -2,33 +2,40 @@
  * config.js
  *
  * Static configuration only.
- * Ollama models are now discovered automatically at runtime via `ollama list`.
- * The only models you need to declare here are cloud/remote ones (Gemini, etc.)
- * that cannot be discovered locally.
+ * Ollama models are discovered automatically at runtime via `ollama list`.
+ * Cloud models (Gemini, OpenAI, Anthropic) are declared here because they
+ * cannot be discovered locally.
  */
 
-// ─── GEMINI (and other remote) MODELS ────────────────────────────────────────
-// These are merged with the auto-discovered Ollama models at page load.
-// Add any Gemini model IDs you want to evaluate here.
+// ─── GEMINI MODELS ────────────────────────────────────────────────────────────
 
 export const GEMINI_MODELS = [
-  {
-    id:      'gemini-2.0-flash-lite',
-    label:   'Gemini 2.0 Flash Lite',
-    backend: 'gemini',
-    active:  false,
-  },
-  {
-    id:      'gemini-1.5-flash',
-    label:   'Gemini 1.5 Flash',
-    backend: 'gemini',
-    active:  false,
-  },
+  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', backend: 'gemini', active: false },
+  { id: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash',      backend: 'gemini', active: false },
+  { id: 'gemini-1.5-flash',      label: 'Gemini 1.5 Flash',      backend: 'gemini', active: false },
+  { id: 'gemini-1.5-pro',        label: 'Gemini 1.5 Pro',        backend: 'gemini', active: false },
+];
+
+// ─── OPENAI MODELS ────────────────────────────────────────────────────────────
+
+export const OPENAI_MODELS = [
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', backend: 'openai', active: false },
+  { id: 'gpt-4o',      label: 'GPT-4o',      backend: 'openai', active: false },
+  { id: 'gpt-4-turbo', label: 'GPT-4 Turbo', backend: 'openai', active: false },
+  { id: 'o1-mini',     label: 'o1 Mini',     backend: 'openai', active: false },
+];
+
+// ─── ANTHROPIC MODELS ─────────────────────────────────────────────────────────
+
+export const ANTHROPIC_MODELS = [
+  { id: 'claude-haiku-4-5-20251001',  label: 'Claude Haiku 4.5',  backend: 'anthropic', active: false },
+  { id: 'claude-sonnet-4-6',          label: 'Claude Sonnet 4.6', backend: 'anthropic', active: false },
+  { id: 'claude-opus-4-6',            label: 'Claude Opus 4.6',   backend: 'anthropic', active: false },
 ];
 
 // ─── CHART COLOR PALETTE ──────────────────────────────────────────────────────
-// Colors are assigned to models in order (Ollama first, then Gemini).
-// If there are more models than colors, the palette wraps around.
+// Assigned in order: Ollama → Gemini → OpenAI → Anthropic.
+// Wraps around if there are more models than colors.
 
 export const CHART_COLORS = [
   '#a78bfa', // violet

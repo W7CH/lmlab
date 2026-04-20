@@ -1,36 +1,30 @@
 /**
  * api.js
  *
- * Thin wrappers around the chat.completions API.
+ * Thin wrappers around each provider's chat completion API.
  *
- * Both backends use the same OpenAI-compatible request shape:
- *   POST { model, messages, temperature, max_tokens }
+ * Supported backends:
+ *   ollama     → local proxy  /v1/chat/completions      (OpenAI-compatible)
+ *   gemini     → Google       /v1beta/openai/...        (OpenAI-compatible)
+ *   openai     → OpenAI       /v1/chat/completions      (native)
+ *   anthropic  → Anthropic    /v1/messages               (different schema)
  *
- * The only differences are:
- *   - Base URL  (localhost for Ollama, Google's endpoint for Gemini)
- *   - Auth      (none for Ollama, Bearer token for Gemini)
- *
- * Return shape: { text: string, tokens: number }
+ * All functions return: { text: string, tokens: number }
  */
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// ─── SHARED HELPERS ───────────────────────────────────────────────────────────
 
 /**
- * Rough token estimate when the API doesn't return usage stats.
- * Rule of thumb: 1 token ≈ 4 characters in English.
- * @param {string} text
- * @returns {number}
+ * Rough token count when the API doesn't return usage stats.
+ * 1 token ≈ 4 characters in English.
  */
 function estimateTokens(text) {
   return Math.round(text.length / 4);
 }
 
 /**
- * Shared fetch logic for any OpenAI-compatible endpoint.
- * @param {string} url        - Full URL to POST to
- * @param {Object} body       - Request body (already includes model + messages)
- * @param {Object} [headers]  - Extra headers (e.g. Authorization)
- * @returns {Promise<{ text: string, tokens: number }>}
+ * POST to any OpenAI-compatible chat/completions endpoint.
+ * Used by Ollama, Gemini, and OpenAI.
  */
 async function callCompletions(url, body, headers = {}) {
   const response = await fetch(url, {
@@ -45,8 +39,7 @@ async function callCompletions(url, body, headers = {}) {
     throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
   }
 
-  const data = await response.json();
-
+  const data   = await response.json();
   const text   = data.choices?.[0]?.message?.content ?? '';
   const tokens = data.usage?.completion_tokens ?? estimateTokens(text);
 
@@ -56,64 +49,109 @@ async function callCompletions(url, body, headers = {}) {
 // ─── OLLAMA ───────────────────────────────────────────────────────────────────
 
 /**
- * Call a locally-running Ollama model via its OpenAI-compatible endpoint.
- *
- * Ollama must be running:  ollama serve
- * The model must be pulled: ollama pull <modelId>
- *
- * @param {string} modelId
- * @param {string} prompt
- * @param {number} temperature
- * @param {number} maxTokens
- * @param {string} baseUrl     - e.g. "http://localhost:11434"
- * @returns {Promise<{ text: string, tokens: number }>}
+ * Call a local Ollama model via the server.js proxy at /v1/*.
+ * No CORS issues — the browser never contacts port 11434 directly.
  */
 export async function callOllama(modelId, prompt, temperature, maxTokens) {
-  // Requests go to our local proxy at /v1/* which server.js forwards to Ollama.
-  // This avoids all CORS issues and keeps the browser unaware of the Ollama port.
-  const url = '/v1/chat/completions';
-
-  const body = {
-    model:      modelId,
-    messages:   [{ role: 'user', content: prompt }],
-    temperature,
-    max_tokens: maxTokens,
-    stream:     false,
-  };
-
-  return callCompletions(url, body);
+  return callCompletions(
+    '/v1/chat/completions',
+    {
+      model:      modelId,
+      messages:   [{ role: 'user', content: prompt }],
+      temperature,
+      max_tokens: maxTokens,
+      stream:     false,
+    },
+  );
 }
 
 // ─── GEMINI ───────────────────────────────────────────────────────────────────
 
 /**
  * Call a Gemini model via Google's OpenAI-compatible endpoint.
- *
- * Requires a Google AI Studio API key:
- *   https://aistudio.google.com/app/apikey
- *
- * The endpoint mirrors the OpenAI spec, so the request body is identical.
- *
- * @param {string} modelId
- * @param {string} prompt
- * @param {number} temperature
- * @param {number} maxTokens
- * @param {string} apiKey
- * @returns {Promise<{ text: string, tokens: number }>}
+ * API key: https://aistudio.google.com/app/apikey
  */
 export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey) {
-  if (!apiKey) {
-    throw new Error('Google API key is required for Gemini models. Enter it in the sidebar.');
-  }
+  if (!apiKey) throw new Error('Google API key is required for Gemini models. Enter it in the sidebar.');
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  return callCompletions(
+    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    {
+      model:      modelId,
+      messages:   [{ role: 'user', content: prompt }],
+      temperature,
+      max_tokens: maxTokens,
+    },
+    { Authorization: `Bearer ${apiKey}` },
+  );
+}
+
+// ─── OPENAI ───────────────────────────────────────────────────────────────────
+
+/**
+ * Call an OpenAI model via the official API.
+ * API key: https://platform.openai.com/api-keys
+ *
+ * Uses the same OpenAI-compatible shape — no adapter needed.
+ * Note: o1 models do not support the temperature parameter; it is omitted
+ * automatically when modelId starts with "o1".
+ */
+export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey) {
+  if (!apiKey) throw new Error('OpenAI API key is required for GPT models. Enter it in the sidebar.');
+
+  const isO1 = modelId.startsWith('o1');
 
   const body = {
     model:      modelId,
     messages:   [{ role: 'user', content: prompt }],
-    temperature,
     max_tokens: maxTokens,
+    // o1 models reject the temperature field entirely
+    ...(!isO1 && { temperature }),
   };
 
-  return callCompletions(url, body, { Authorization: `Bearer ${apiKey}` });
+  return callCompletions(
+    'https://api.openai.com/v1/chat/completions',
+    body,
+    { Authorization: `Bearer ${apiKey}` },
+  );
+}
+
+// ─── ANTHROPIC ────────────────────────────────────────────────────────────────
+
+/**
+ * Call an Anthropic Claude model via the Messages API.
+ * API key: https://console.anthropic.com/settings/keys
+ *
+ * The Anthropic API has a DIFFERENT schema from OpenAI:
+ *   Request:  POST /v1/messages  { model, max_tokens, messages, temperature }
+ *   Response: { content: [{ type: 'text', text: '...' }], usage: { output_tokens } }
+ *
+ * Because the browser cannot call api.anthropic.com directly (CORS), this
+ * request is routed through server.js's /api/anthropic/messages proxy route.
+ */
+export async function callAnthropic(modelId, prompt, temperature, maxTokens, apiKey) {
+  if (!apiKey) throw new Error('Anthropic API key is required for Claude models. Enter it in the sidebar.');
+
+  const response = await fetch('/api/anthropic/messages', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey,         // forwarded by server.js; never logged
+      model:       modelId,
+      max_tokens:  maxTokens,
+      temperature,
+      messages:    [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
+  }
+
+  const data   = await response.json();
+  const text   = data.content?.[0]?.text ?? '';
+  const tokens = data.usage?.output_tokens ?? estimateTokens(text);
+
+  return { text, tokens };
 }

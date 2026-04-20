@@ -27,7 +27,9 @@ import { URL }          from 'node:url';
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 
 const PORT        = 8080;
-const OLLAMA_BASE = 'http://127.0.0.1:11434';
+const OLLAMA_BASE    = 'http://127.0.0.1:11434';
+const ANTHROPIC_API  = 'https://api.anthropic.com';
+const ANTHROPIC_VER  = '2023-06-01';
 
 // MIME types for static file serving
 const MIME = {
@@ -200,6 +202,60 @@ function proxyToOllama(req, res) {
   req.pipe(proxyReq);
 }
 
+// ─── ANTHROPIC PROXY ─────────────────────────────────────────────────────────
+
+/**
+ * Proxy POST /api/anthropic/messages → https://api.anthropic.com/v1/messages
+ *
+ * Why a proxy? The Anthropic API sets Access-Control-Allow-Origin: * only for
+ * specific origins; direct browser calls are blocked by CORS in most setups.
+ * We receive the apiKey in the request body, forward it as x-api-key, and
+ * never log it.
+ *
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse}  res
+ */
+async function proxyToAnthropic(req, res) {
+  // Collect the full request body
+  const raw = await new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end',  () => resolve(Buffer.concat(chunks).toString()));
+    req.on('error', reject);
+  });
+
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return jsonResponse(res, 400, { error: 'Invalid JSON body' });
+  }
+
+  // Pull the key out of the body — do NOT forward it back to the client
+  const { apiKey, ...anthropicBody } = payload;
+  if (!apiKey) {
+    return jsonResponse(res, 400, { error: 'apiKey is required in request body' });
+  }
+
+  const upstream = await fetch(`${ANTHROPIC_API}/v1/messages`, {
+    method:  'POST',
+    headers: {
+      'Content-Type':      'application/json',
+      'x-api-key':         apiKey,
+      'anthropic-version': ANTHROPIC_VER,
+    },
+    body: JSON.stringify(anthropicBody),
+  });
+
+  const upstreamText = await upstream.text();
+
+  res.writeHead(upstream.status, {
+    'Content-Type':                'application/json',
+    'Access-Control-Allow-Origin': '*',
+  });
+  res.end(upstreamText);
+}
+
 // ─── STATIC FILE SERVER ───────────────────────────────────────────────────────
 
 const ROOT = path.resolve('.');   // serve from the project root
@@ -268,6 +324,11 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       return jsonResponse(res, 500, { error: err.message });
     }
+  }
+
+  // POST /api/anthropic/messages  (Anthropic proxy)
+  if (method === 'POST' && url === '/api/anthropic/messages') {
+    return proxyToAnthropic(req, res);
   }
 
   // Proxy /v1/* → Ollama

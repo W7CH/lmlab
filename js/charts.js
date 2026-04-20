@@ -1,26 +1,18 @@
 /**
  * charts.js
  *
- * Builds the two data-visualisation panels:
- *   1. Latency bar chart  (horizontal bars, CSS-animated)
- *   2. Compare table      (ranked by latency, shows tok/sec)
- *
- * Both functions accept the same `results` array for consistency.
+ * Two data-visualisation panels:
+ *   1. Latency bar chart  — horizontal bars, CSS-animated, latency in seconds
+ *   2. Compare table      — ranked by latency, tok/sec, latency in seconds
  */
 
-// Colour ramp cycled across bar chart bars (matches model accent colours in config).
-const BAR_COLORS = [
-  '#6c8bff', '#a78bfa', '#34d399',
-  '#f59e0b', '#f472b6', '#60a5fa',
-];
+import { msToSec } from './ui.js';
 
 // ─── LATENCY BAR CHART ────────────────────────────────────────────────────────
 
 /**
- * Render a horizontal latency bar chart.
- *
- * @param {Array<{ status: string, elapsed: number, model: Object }>} results
- * @param {HTMLElement} container   - The .bar-chart wrapper element
+ * @param {Array<{ status, elapsed, model: { label, color } }>} results
+ * @param {HTMLElement} container
  */
 export function buildLatencyChart(results, container) {
   container.innerHTML = '';
@@ -33,10 +25,10 @@ export function buildLatencyChart(results, container) {
 
   const max = Math.max(...successful.map(r => r.elapsed));
 
-  successful.forEach((r, i) => {
+  successful.forEach(r => {
     // Minimum bar width of 5% so label is always readable
     const pct   = Math.max(5, Math.round((r.elapsed / max) * 100));
-    const color = BAR_COLORS[i % BAR_COLORS.length];
+    const color = r.model.color ?? '#6c8bff';
 
     const row = document.createElement('div');
     row.className = 'bar-row';
@@ -44,7 +36,7 @@ export function buildLatencyChart(results, container) {
       <span class="bar-label">${r.model.label}</span>
       <div class="bar-track">
         <div class="bar-fill" style="width: ${pct}%; background: ${color};">
-          ${r.elapsed}ms
+          ${msToSec(r.elapsed)}
         </div>
       </div>
     `;
@@ -55,11 +47,8 @@ export function buildLatencyChart(results, container) {
 // ─── COMPARE TABLE ───────────────────────────────────────────────────────────
 
 /**
- * Populate the comparison table body.
- * Rows are sorted: successful models by ascending latency, errors last.
- *
  * @param {Array} results
- * @param {HTMLElement} tbody   - The <tbody> element to fill
+ * @param {HTMLElement} tbody
  */
 export function buildCompareTable(results, tbody) {
   tbody.innerHTML = '';
@@ -70,24 +59,25 @@ export function buildCompareTable(results, tbody) {
     return a.elapsed - b.elapsed;
   });
 
-  sorted.forEach((r, i) => {
+  // Count only successful rows for rank numbering
+  let successRank = 0;
+
+  sorted.forEach(r => {
     const isOk = r.status === 'ok';
 
-    // Rank only applies to successful rows
-    const rank      = isOk ? i + 1 : null;
+    const rank      = isOk ? ++successRank : null;
     const rankClass = rank && rank <= 3 ? `rank-${rank}` : '';
     const rankCell  = rank
       ? `<span class="rank-badge ${rankClass}">${rank}</span>`
       : '—';
 
-    // Tokens per second (est.)
+    // tok/sec — divide tokens by elapsed seconds
     const tps = isOk && r.elapsed > 0
       ? (r.tokens / (r.elapsed / 1000)).toFixed(1)
       : '—';
 
     const latencyColor = isOk ? 'var(--warn)' : 'var(--danger)';
-    const latencyVal   = isOk ? `${r.elapsed}` : '—';
-    const tokensVal    = isOk ? r.tokens : '—';
+    const latencyVal   = isOk ? msToSec(r.elapsed) : '—';
 
     const statusBadge = isOk
       ? `<span class="badge badge-winner">ok</span>`
@@ -99,7 +89,7 @@ export function buildCompareTable(results, tbody) {
       <td style="font-family: var(--font-ui); font-weight: 500;">${r.model.label}</td>
       <td><span class="badge badge-${r.model.backend}">${r.model.backend}</span></td>
       <td style="color: ${latencyColor};">${latencyVal}</td>
-      <td>${tokensVal}</td>
+      <td>${isOk ? r.tokens : '—'}</td>
       <td>${tps}</td>
       <td>${statusBadge}</td>
     `;

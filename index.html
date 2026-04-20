@@ -47,7 +47,7 @@
       </div>
       <div>
         <h1>LMLab</h1>
-        <span>Ollama + Gemini · chat.completions API</span>
+        <span>Ollama · Gemini · Anthropic · OpenAI</span>
       </div>
     </div>
     <div class="header-badge" id="runTimer">ready</div>
@@ -76,13 +76,25 @@
         </div>
       </div>
 
-      <!-- Google API key -->
+      <!-- API Keys -->
       <div>
-        <div class="section-label">Google API Key</div>
+        <div class="section-label">API Keys</div>
         <div class="apikey-box">
-          <label for="apiKeyInput">Required for Gemini models</label>
+          <label for="geminiKeyInput">Google (Gemini)</label>
           <div class="apikey-row">
-            <input type="password" id="apiKeyInput" placeholder="AIzaSy…" />
+            <input type="password" id="geminiKeyInput" placeholder="AIzaSy…" />
+          </div>
+        </div>
+        <div class="apikey-box" style="margin-top: 6px;">
+          <label for="anthropicKeyInput">Anthropic (Claude)</label>
+          <div class="apikey-row">
+            <input type="password" id="anthropicKeyInput" placeholder="sk-ant-…" />
+          </div>
+        </div>
+        <div class="apikey-box" style="margin-top: 6px;">
+          <label for="openaiKeyInput">OpenAI (GPT)</label>
+          <div class="apikey-row">
+            <input type="password" id="openaiKeyInput" placeholder="sk-…" />
           </div>
         </div>
       </div>
@@ -195,7 +207,7 @@
                 <th>#</th>
                 <th>Model</th>
                 <th>Backend</th>
-                <th>Latency (ms)</th>
+                <th>Latency</th>
                 <th>Tokens (est.)</th>
                 <th>Tok / sec (est.)</th>
                 <th>Status</th>
@@ -208,7 +220,7 @@
 
       <!-- ── TAB: Timing chart ──────────────────────────────────────────── -->
       <div id="tabChart" class="hidden">
-        <p class="chart-title">Response latency (ms) — lower is faster</p>
+        <p class="chart-title">Response latency — lower is faster</p>
         <div class="bar-chart" id="latencyChart"></div>
       </div>
 

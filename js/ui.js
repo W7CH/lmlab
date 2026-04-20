@@ -5,13 +5,28 @@
  * No fetch, no state — just building and updating elements.
  */
 
-// ─── STATUS BAR ───────────────────────────────────────────────────────────────
+// ─── LATENCY FORMATTING ───────────────────────────────────────────────────────
 
 /**
- * Update the status bar at the top of the content area.
- * @param {'idle'|'running'|'done'|'error'} type
- * @param {string} message
+ * Convert milliseconds to a human-readable seconds string.
+ * Examples:  312  → "0.31s"
+ *           1840  → "1.84s"
+ *          12500  → "12.5s"
+ *
+ * Rules:
+ *   < 10 s  → 2 decimal places  ("1.84s")
+ *   ≥ 10 s  → 1 decimal place   ("12.5s")
+ *
+ * @param {number} ms
+ * @returns {string}
  */
+export function msToSec(ms) {
+  const s = ms / 1000;
+  return s < 10 ? `${s.toFixed(2)}s` : `${s.toFixed(1)}s`;
+}
+
+// ─── STATUS BAR ───────────────────────────────────────────────────────────────
+
 export function setStatus(type, message) {
   const dot  = document.getElementById('statusDot');
   const text = document.getElementById('statusText');
@@ -23,8 +38,6 @@ export function setStatus(type, message) {
 
 /**
  * Show a transient loading / error state inside the model list container.
- * Replaced by renderModelList() once data arrives.
- *
  * @param {'loading'|'error'} state
  * @param {string} [message]
  */
@@ -52,14 +65,8 @@ export function setModelListState(state, message = '') {
 }
 
 /**
- * Render the model toggle list.
- * Returns a Set<string> of active model IDs — mutated on click.
- *
- * Each model item shows:
- *   • A colored indicator dot (uses model.color)
- *   • The model label
- *   • Backend badge (ollama / gemini)
- *   • Size badge if available (e.g. "3.8 GB")
+ * Render the full model toggle list.
+ * Returns a Set<string> of active model IDs, mutated on click.
  *
  * @param {Array}       models
  * @param {HTMLElement} container
@@ -112,12 +119,6 @@ export function renderModelList(models, container) {
 
 // ─── PRESET BUTTONS ───────────────────────────────────────────────────────────
 
-/**
- * Render preset-prompt buttons inside the prompt box footer.
- * @param {Record<string,string>} presets
- * @param {HTMLElement}           container
- * @param {HTMLTextAreaElement}   textarea
- */
 export function renderPresets(presets, container, textarea) {
   container.innerHTML = '';
   Object.entries(presets).forEach(([label, text]) => {
@@ -131,11 +132,6 @@ export function renderPresets(presets, container, textarea) {
 
 // ─── RESULT CARDS ─────────────────────────────────────────────────────────────
 
-/**
- * Insert a loading-state placeholder card.
- * @param {{ id: string, label: string, backend: string, color: string }} model
- * @param {HTMLElement} grid
- */
 export function insertLoadingCard(model, grid) {
   const card     = document.createElement('div');
   card.className = 'result-card';
@@ -159,17 +155,13 @@ export function insertLoadingCard(model, grid) {
   grid.appendChild(card);
 }
 
-/**
- * Replace a loading card with the completed result.
- * @param {string} modelId
- * @param {{ status, text?, tokens?, elapsed, error?, model }} result
- */
 export function updateCard(modelId, result) {
   const card = document.getElementById(`card-${modelId}`);
   if (!card) return;
 
-  const m       = result.model;
-  const accent  = m.color ?? '#6c8bff';
+  const m      = result.model;
+  const accent = m.color ?? '#6c8bff';
+  const latSec = msToSec(result.elapsed);
 
   const bodyHtml = result.status === 'ok'
     ? `<pre><code class="language-python">${escapeHtml(result.text)}</code></pre>`
@@ -182,7 +174,7 @@ export function updateCard(modelId, result) {
       <span class="card-model-name">${m.label}</span>
       <div class="card-badges">
         <span class="badge badge-${m.backend}">${m.backend}</span>
-        <span class="badge badge-time">${result.elapsed}ms</span>
+        <span class="badge badge-time">${latSec}</span>
         ${result.status === 'ok'
           ? `<span class="badge badge-tokens">${result.tokens} tok</span>`
           : `<span class="badge badge-error">error</span>`}
@@ -190,7 +182,7 @@ export function updateCard(modelId, result) {
     </div>
     <div class="card-body">${bodyHtml}</div>
     <div class="card-footer">
-      <span class="card-footer-stat">latency: <span>${result.elapsed}ms</span></span>
+      <span class="card-footer-stat">latency: <span>${latSec}</span></span>
       <span class="card-footer-stat">tokens: <span>${result.status === 'ok' ? result.tokens : '—'}</span></span>
       ${result.status === 'ok'
         ? `<button class="copy-btn" data-model-id="${modelId}">Copy</button>`
@@ -211,10 +203,6 @@ export function updateCard(modelId, result) {
   );
 }
 
-/**
- * Add the "fastest" winner badge to a card and highlight its border.
- * @param {string} modelId
- */
 export function markWinner(modelId) {
   const card = document.getElementById(`card-${modelId}`);
   if (!card) return;
@@ -244,15 +232,15 @@ export function hideEmptyState() {
 
 /**
  * Populate and reveal the summary metric cards.
- * @param {{ total, success, failed, fastest, avgLatency, avgTokens }} stats
+ * @param {{ total, success, failed, fastest, avgElapsed, avgTokens }} stats
  */
 export function renderSummary(stats) {
   document.getElementById('summarySection').classList.remove('hidden');
   document.getElementById('metricModels').textContent       = stats.total;
   document.getElementById('metricSuccess').textContent      = `${stats.success} success · ${stats.failed} failed`;
-  document.getElementById('metricFastest').textContent      = `${stats.fastest.elapsed}ms`;
+  document.getElementById('metricFastest').textContent      = msToSec(stats.fastest.elapsed);
   document.getElementById('metricFastestModel').textContent = stats.fastest.model.label;
-  document.getElementById('metricAvg').textContent          = `${stats.avgLatency}ms`;
+  document.getElementById('metricAvg').textContent          = msToSec(stats.avgElapsed);
   document.getElementById('metricTokens').textContent       = stats.avgTokens;
 }
 
@@ -263,11 +251,6 @@ export function hideSummary() {
 
 // ─── OLLAMA STATUS INDICATOR ─────────────────────────────────────────────────
 
-/**
- * Update the Ollama status pill in the sidebar.
- * @param {'unknown'|'checking'|'running'|'stopped'|'error'} state
- * @param {string} [detail]  — optional extra text (e.g. model count or error)
- */
 export function setOllamaStatus(state, detail = '') {
   const pill  = document.getElementById('ollamaStatusPill');
   const label = document.getElementById('ollamaStatusLabel');
