@@ -74,7 +74,7 @@ export async function runEval(models, selectedIds) {
   }
 
   // ── 4. Start wall-clock timer in header badge ─────────────────────────────────────────────
-  setStatus('running', `Running ${selectedIds.size} model(s) in parallel…`);
+  setStatus('running', `Running ${modelsToRun.length} model(s) in parallel…`);
 
   const runStart      = Date.now();
   const timerBadge    = document.getElementById('runTimer');

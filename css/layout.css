@@ -1,4 +1,4 @@
-/* ─── RESET ────────────────────────────────────────────────────────────────── */
+/* ─── RESET ──────────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -11,25 +11,28 @@ body {
   font-family: var(--font-ui);
   font-size:   14px;
   min-height:  100vh;
+  /* Smooth background + text swap on theme toggle */
+  transition:  background 0.2s ease, color 0.2s ease;
 }
 
-/* ─── SCROLLBAR ─────────────────────────────────────────────────────────────── */
+/* ─── SCROLLBAR ──────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: var(--border2); border-radius: 10px; }
 
-/* ─── HEADER ────────────────────────────────────────────────────────────────── */
+/* ─── HEADER ─────────────────────────────────────────────────────────────────── */
 header {
-  padding:        20px 32px 16px;
-  border-bottom:  1px solid var(--border);
-  display:        flex;
-  align-items:    center;
+  padding:         20px 32px 16px;
+  border-bottom:   1px solid var(--border);
+  display:         flex;
+  align-items:     center;
   justify-content: space-between;
-  position:       sticky;
-  top:            0;
-  background:     rgba(13, 15, 20, 0.92);
+  position:        sticky;
+  top:             0;
+  background:      var(--bg-header-glass);
   backdrop-filter: blur(12px);
-  z-index:        100;
+  z-index:         100;
+  transition:      background 0.2s ease, border-color 0.2s ease;
 }
 
 .logo {
@@ -39,23 +42,31 @@ header {
 }
 
 .logo-icon {
-  width:            30px;
-  height:           30px;
-  background:       linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius:    8px;
-  display:          flex;
-  align-items:      center;
-  justify-content:  center;
-  font-size:        16px;
-  flex-shrink:      0;
+  width:           30px;
+  height:          30px;
+  background:      linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:   8px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-size:       16px;
+  flex-shrink:     0;
 }
 
 .logo-icon svg {
   filter: drop-shadow(0 0 8px rgba(108, 139, 255, 0.4));
 }
 
-.logo h1    { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
-.logo span  { color: var(--muted); font-size: 12px; }
+.logo h1   { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.logo span { color: var(--muted); font-size: 12px; }
+
+/* ─── HEADER RIGHT CLUSTER ───────────────────────────────────────────────────── */
+/* Groups the run-timer badge and theme-toggle button side by side */
+.header-right {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+}
 
 .header-badge {
   background:    var(--bg4);
@@ -65,15 +76,66 @@ header {
   font-size:     11px;
   color:         var(--muted);
   font-family:   var(--font-code);
+  transition:    background 0.2s, border-color 0.2s, color 0.2s;
 }
 
-/* ─── MAIN SPLIT LAYOUT ─────────────────────────────────────────────────────── */
+/* ─── THEME TOGGLE BUTTON ────────────────────────────────────────────────────── */
+.theme-btn {
+  width:           32px;
+  height:          32px;
+  border-radius:   50%;
+  background:      var(--bg4);
+  border:          1px solid var(--border2);
+  cursor:          pointer;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+  user-select:     none;
+  transition:      background 0.2s, border-color 0.2s, transform 0.15s;
+  /* SVG inherits color for fill/stroke */
+  color:           var(--muted);
+}
+
+.theme-btn:hover {
+  background:   var(--bg3);
+  border-color: var(--accent);
+  color:        var(--accent);
+  transform:    scale(1.1);
+}
+
+.theme-btn:active { transform: scale(0.95); }
+
+/* Inline SVG sizing */
+.theme-btn svg {
+  width:          16px;
+  height:         16px;
+  fill:           none;
+  stroke:         currentColor;
+  stroke-width:   2;
+  stroke-linecap: round;
+  overflow:       visible;
+}
+
+/* Moon fill for crescent shape */
+.icon-moon path { fill: currentColor; stroke: none; }
+
+/* Icon visibility controlled entirely by CSS — no JS class toggling needed.
+   Default (dark theme): show moon, hide sun.
+   Light theme:          hide moon, show sun.                                   */
+.theme-btn .icon-moon { display: flex; }
+.theme-btn .icon-sun  { display: none; }
+
+[data-theme="light"] .theme-btn .icon-moon { display: none; }
+[data-theme="light"] .theme-btn .icon-sun  { display: flex; }
+
+/* ─── MAIN SPLIT LAYOUT ──────────────────────────────────────────────────────── */
 .main {
   display: flex;
   height:  calc(100vh - 61px);
 }
 
-/* ─── SIDEBAR ───────────────────────────────────────────────────────────────── */
+/* ─── SIDEBAR ────────────────────────────────────────────────────────────────── */
 .sidebar {
   width:          300px;
   min-width:      260px;
@@ -83,6 +145,7 @@ header {
   display:        flex;
   flex-direction: column;
   gap:            20px;
+  transition:     background 0.2s, border-color 0.2s;
 }
 
 .section-label {
@@ -104,12 +167,12 @@ header {
   gap:            20px;
 }
 
-/* ─── SECTION HEADER (title + tabs row) ─────────────────────────────────────── */
+/* ─── SECTION HEADER ─────────────────────────────────────────────────────────── */
 .section-header {
-  display:     flex;
-  align-items: center;
+  display:         flex;
+  align-items:     center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom:   12px;
 }
 
 .section-header h2 {
@@ -118,5 +181,5 @@ header {
   color:       var(--text);
 }
 
-/* ─── UTILITY ───────────────────────────────────────────────────────────────── */
+/* ─── UTILITY ────────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -28,6 +28,7 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ★ **Anthropic** and **OpenAI** are now first-class backends. Add your API keys in the sidebar and run GPT-4o, o1-mini, Claude Haiku, Sonnet, and Opus side-by-side with your local Ollama models. Anthropic calls are proxied through `server.js` to work around CORS. Latency display is normalized to seconds across all backends.
 
+★ **Light/dark theme support:** A toggle button in the header switches between themes, persisted to `localStorage` and respecting `prefers-color-scheme` on first visit. Theme switching is zero-flash: `initTheme()` runs before the first render, syntax highlighting swaps instantly via a `<link>` href swap, and icon visibility is pure CSS — no JavaScript class manipulation needed.
 
 ---
 
@@ -38,7 +39,7 @@ lmlab/
 ├── server.js           # Dev server + Ollama lifecycle manager + API proxies (run this)
 ├── index.html          # Page shell — HTML only, no inline styles or scripts
 ├── css/
-│   ├── variables.css   # Design tokens (:root) — edit to retheme
+│   ├── variables.css   # Design tokens — :root (invariant), [data-theme="dark"], [data-theme="light"]
 │   ├── layout.css      # Reset, header, sidebar, content area
 │   └── components.css  # Every reusable UI component
 ├── js/
@@ -48,7 +49,7 @@ lmlab/
 │   ├── ui.js           # DOM builders (cards, model list, skeletons, status bar, Ollama pill)
 │   ├── charts.js       # Latency bar chart + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
-│   └── main.js         # Entry point — wires everything, handles tabs
+│   └── main.js         # Entry point — wires everything, handles tabs, theme init/toggle
 └── README.md
 ```
 
@@ -80,7 +81,8 @@ POST /api/ollama/start ──► spawn("ollama serve")
 POST /v1/chat/completions ─► proxy to :11434/v1/ ──────────►
                             ◄──────── streamed response ────
 ◄────── streamed response ──
-
+```
+```
 Browser                  server.js               Anthropic
 ────────────────────────────────────────────────────────────
 POST /api/anthropic/ ────► proxyToAnthropic()
@@ -199,6 +201,16 @@ Cloud models (Gemini, OpenAI, Anthropic) are still declared statically since the
 
 Colors are assigned automatically from `CHART_COLORS` by index across the full merged list (Ollama → Gemini → OpenAI → Anthropic). You no longer need to specify a `color` field per model.
 
+### Theming (`css/variables.css`)
+
+The stylesheet is split into three token blocks:
+
+- **`:root`** — truly invariant tokens: font stacks and border radii.
+- **`[data-theme="dark"]`** — all color tokens for dark mode (the default), including `--bg-header-glass`, `--skeleton-base`/`--skeleton-shine`, and `--bar-label-color`.
+- **`[data-theme="light"]`** — overrides for light mode: lighter surfaces, inverted border alphas, a more saturated accent blue, deeper semantic colors (success/warn/danger), and warm/cool shimmer stops.
+
+To retheme, edit the token values in the relevant `[data-theme]` block. Both themes are supported out of the box and switch instantly.
+
 ### Adding prompt presets (`js/config.js`)
 
 ```js
@@ -236,6 +248,9 @@ The `o1` model family does not accept a `temperature` parameter. This is handled
 
 - **Anthropic calls fail / CORS error:**
 Make sure you are running `server.js` and accessing the dashboard via `http://localhost:8080`. Direct file access (`file://`) bypasses the proxy.
+
+- **Theme flashes wrong color on load:**
+This should not happen — `initTheme()` runs before the first render. If you see a flash, check that your browser is not overriding `localStorage` or blocking the inline script. Clearing `localStorage` resets the preference to the OS default (`prefers-color-scheme`).
 
 - **Port 8080 already in use:**
 Change `const PORT = 8080` at the top of `server.js` to any free port.
