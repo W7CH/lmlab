@@ -312,7 +312,7 @@
 /* ─── SUMMARY METRIC CARDS ───────────────────────────────────────────────────── */
 .summary-grid {
   display:               grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap:                   10px;
 }
 
@@ -852,3 +852,68 @@
   color:     var(--muted);
   padding:   6px 2px;
 }
+
+/* ─── BAR CHART EXTRAS (stacked bars, right-side totals, legend) ─────────────── */
+
+/* Value label to the right of the bar track (used by token chart) */
+.bar-total {
+  font-size:    11px;
+  font-family:  var(--font-code);
+  color:        var(--muted);
+  white-space:  nowrap;
+  flex-shrink:  0;
+  min-width:    70px;
+}
+
+/* Prompt-token fill — muted background color */
+.bar-fill-prompt {
+  background:  color-mix(in srgb, var(--muted) 35%, transparent) !important;
+  position:    absolute;
+  top:         0;
+  left:        0;
+  height:      100%;
+  font-size:   10px;
+  display:     flex;
+  align-items: center;
+  padding:     0 6px;
+  color:       var(--text);
+  white-space: nowrap;
+  overflow:    hidden;
+}
+
+/* Completion-token fill — model accent color, sits after prompt segment */
+.bar-fill-completion {
+  position:    absolute;
+  top:         0;
+  left:        0;   /* actual left set via margin-left in JS? No — use two-layer approach */
+  height:      100%;
+  display:     flex;
+  align-items: center;
+  padding:     0 6px;
+  font-size:   10px;
+  color:       rgba(255,255,255,0.85);
+  white-space: nowrap;
+  overflow:    hidden;
+}
+
+/* Legend row */
+.chart-legend {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+  margin-top:  12px;
+  font-size:   11px;
+  color:       var(--muted);
+  flex-wrap:   wrap;
+}
+
+.legend-dot {
+  display:       inline-block;
+  width:         10px;
+  height:        10px;
+  border-radius: 3px;
+  flex-shrink:   0;
+}
+
+.legend-prompt     { background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.legend-completion { background: var(--accent); }

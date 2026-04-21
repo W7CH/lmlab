@@ -191,8 +191,10 @@
           <h2>Run Summary</h2>
           <div class="tabs">
             <button class="tab-btn active" data-tab="results">Results</button>
-            <button class="tab-btn"        data-tab="compare">Compare Table</button>
-            <button class="tab-btn"        data-tab="chart">Timing Chart</button>
+            <button class="tab-btn"        data-tab="compare">Compare</button>
+            <button class="tab-btn"        data-tab="chart">Latency</button>
+            <button class="tab-btn"        data-tab="throughput">Throughput</button>
+            <button class="tab-btn"        data-tab="tokens">Tokens</button>
           </div>
         </div>
         <div class="summary-grid">
@@ -212,9 +214,14 @@
             <div class="metric-sub">across all models</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Avg tokens</div>
+            <div class="metric-label">Best throughput</div>
+            <div class="metric-val"  id="metricTps">—</div>
+            <div class="metric-sub" id="metricTpsModel">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg total tokens</div>
             <div class="metric-val"  id="metricTokens">—</div>
-            <div class="metric-sub">completion tokens</div>
+            <div class="metric-sub">prompt + completion</div>
           </div>
         </div>
       </div>
@@ -241,8 +248,10 @@
                 <th>Model</th>
                 <th>Backend</th>
                 <th>Latency</th>
-                <th>Tokens (est.)</th>
-                <th>Tok / sec (est.)</th>
+                <th>Tok / s</th>
+                <th>Prompt tok</th>
+                <th>Completion tok</th>
+                <th>Total tok</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -251,10 +260,22 @@
         </div>
       </div>
 
-      <!-- ── TAB: Timing chart ──────────────────────────────────────────── -->
+      <!-- ── TAB: Latency chart -->
       <div id="tabChart" class="hidden">
         <p class="chart-title">Response latency — lower is faster</p>
         <div class="bar-chart" id="latencyChart"></div>
+      </div>
+
+      <!-- Throughput chart -->
+      <div id="tabThroughput" class="hidden">
+        <p class="chart-title">Output throughput (tok / s) — higher is faster</p>
+        <div class="bar-chart" id="throughputChart"></div>
+      </div>
+
+      <!-- Token usage chart -->
+      <div id="tabTokens" class="hidden">
+        <p class="chart-title">Token usage — prompt + completion (lower = more efficient)</p>
+        <div class="bar-chart" id="tokenChart"></div>
       </div>
 
     </main><!-- /content -->

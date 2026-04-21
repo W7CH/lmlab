@@ -9,7 +9,10 @@
  *   openai     → OpenAI       /v1/chat/completions      (native)
  *   anthropic  → Anthropic    /v1/messages               (different schema)
  *
- * All functions return: { text: string, tokens: number }
+ * All functions return: { text, tokens, promptTokens }
+ *   text         — completion text
+ *   tokens       — completion (output) token count
+ *   promptTokens — input token count (0 if not reported by the API)
  */
 
 // ─── SHARED HELPERS ───────────────────────────────────────────────────────────
@@ -39,11 +42,12 @@ async function callCompletions(url, body, headers = {}) {
     throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
   }
 
-  const data   = await response.json();
-  const text   = data.choices?.[0]?.message?.content ?? '';
-  const tokens = data.usage?.completion_tokens ?? estimateTokens(text);
+  const data         = await response.json();
+  const text         = data.choices?.[0]?.message?.content ?? '';
+  const tokens       = data.usage?.completion_tokens ?? estimateTokens(text);
+  const promptTokens = data.usage?.prompt_tokens     ?? 0;
 
-  return { text, tokens };
+  return { text, tokens, promptTokens };
 }
 
 // ─── OLLAMA ───────────────────────────────────────────────────────────────────
@@ -101,17 +105,15 @@ export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey
 
   const isO1 = modelId.startsWith('o1');
 
-  const body = {
-    model:      modelId,
-    messages:   [{ role: 'user', content: prompt }],
-    max_tokens: maxTokens,
-    // o1 models reject the temperature field entirely
-    ...(!isO1 && { temperature }),
-  };
-
   return callCompletions(
     'https://api.openai.com/v1/chat/completions',
-    body,
+    {
+      model:      modelId,
+      messages:   [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      // o1 models reject the temperature field entirely
+      ...(!isO1 && { temperature }),
+    },
     { Authorization: `Bearer ${apiKey}` },
   );
 }
@@ -149,9 +151,10 @@ export async function callAnthropic(modelId, prompt, temperature, maxTokens, api
     throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
   }
 
-  const data   = await response.json();
-  const text   = data.content?.[0]?.text ?? '';
-  const tokens = data.usage?.output_tokens ?? estimateTokens(text);
+  const data         = await response.json();
+  const text         = data.content?.[0]?.text ?? '';
+  const tokens       = data.usage?.output_tokens ?? estimateTokens(text);
+  const promptTokens = data.usage?.input_tokens  ?? 0;
 
-  return { text, tokens };
+  return { text, tokens, promptTokens };
 }

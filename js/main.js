@@ -304,7 +304,7 @@ function applyTheme(theme) {
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 
-const TAB_IDS = ['results', 'compare', 'chart'];
+const TAB_IDS = ['results', 'compare', 'chart', 'throughput', 'tokens'];
 
 function switchTab(name) {
   TAB_IDS.forEach(t => {

@@ -212,7 +212,10 @@ export function updateCard(modelId, result) {
     <div class="card-body">${bodyHtml}</div>
     <div class="card-footer">
       <span class="card-footer-stat">latency: <span>${latSec}</span></span>
-      <span class="card-footer-stat">tokens: <span>${result.status === 'ok' ? result.tokens : '—'}</span></span>
+      <span class="card-footer-stat">out: <span>${result.status === 'ok' ? result.tokens + ' tok' : '—'}</span></span>
+      ${result.status === 'ok' && result.promptTokens
+        ? `<span class="card-footer-stat">in: <span>${result.promptTokens} tok</span></span>`
+        : ''}
       ${result.status === 'ok'
         ? `<button class="copy-btn" data-model-id="${modelId}">Copy</button>`
         : ''}
@@ -270,10 +273,14 @@ export function renderSummary(stats) {
   document.getElementById('metricFastest').textContent      = msToSec(stats.fastest.elapsed);
   document.getElementById('metricFastestModel').textContent = stats.fastest.model.label;
   document.getElementById('metricAvg').textContent          = msToSec(stats.avgElapsed);
-  document.getElementById('metricTokens').textContent       = stats.avgTokens;
+  // Best throughput
+  const bestTps = stats.bestTps.tokens / (stats.bestTps.elapsed / 1000);
+  document.getElementById('metricTps').textContent          = bestTps.toFixed(1) + ' tok/s';
+  document.getElementById('metricTpsModel').textContent     = stats.bestTps.model.label;
+  // Avg total tokens (prompt + completion)
+  document.getElementById('metricTokens').textContent       = stats.avgTotalTokens ?? stats.avgTokens;
 }
 
-/** Hide the summary section (reset before a new run). */
 export function hideSummary() {
   document.getElementById('summarySection').classList.add('hidden');
 }

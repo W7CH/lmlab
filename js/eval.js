@@ -7,6 +7,7 @@
  *   2. Fire all selected models in parallel (Promise.allSettled)
  *   3. Update each result card as responses arrive
  *   4. Compute summary statistics once everything settles
+ *   5. Collects: latency, completion tokens, prompt tokens, response length
  *
  * Backends: ollama · gemini · openai · anthropic
  */
@@ -23,7 +24,7 @@ import {
   hideSummary,
   renderSummary,
 } from './ui.js';
-import { buildLatencyChart, buildCompareTable } from './charts.js';
+import { buildAllCharts, buildCompareTable } from './charts.js';
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -40,11 +41,11 @@ export async function runEval(models, selectedIds) {
     return;
   }
 
-  const temperature    = parseFloat(document.getElementById('tempInput').value);
-  const maxTokens      = parseInt(document.getElementById('maxTokensInput').value, 10);
-  const geminiKey      = document.getElementById('geminiKeyInput').value.trim();
-  const openaiKey      = document.getElementById('openaiKeyInput').value.trim();
-  const anthropicKey   = document.getElementById('anthropicKeyInput').value.trim();
+  const temperature  = parseFloat(document.getElementById('tempInput').value);
+  const maxTokens    = parseInt(document.getElementById('maxTokensInput').value, 10);
+  const geminiKey    = document.getElementById('geminiKeyInput').value.trim();
+  const openaiKey    = document.getElementById('openaiKeyInput').value.trim();
+  const anthropicKey = document.getElementById('anthropicKeyInput').value.trim();
 
   const modelsToRun = models.filter(m => selectedIds.has(m.id));
   const needsOllama = modelsToRun.some(m => m.backend === 'ollama');
@@ -96,10 +97,18 @@ export async function runEval(models, selectedIds) {
         geminiKey, openaiKey, anthropicKey,
       });
       const elapsed = Date.now() - start;
-      resultsMap[m.id] = { status: 'ok', ...res, elapsed, model: m };
+      resultsMap[m.id] = {
+        status:       'ok',
+        text:         res.text,
+        tokens:       res.tokens,
+        promptTokens: res.promptTokens ?? 0,
+        totalTokens:  (res.tokens ?? 0) + (res.promptTokens ?? 0),
+        chars:        res.text.length,
+        elapsed,
+        model: m,
+      };
     } catch (err) {
-      const elapsed = Date.now() - start;
-      resultsMap[m.id] = { status: 'error', error: err.message, elapsed, model: m };
+      resultsMap[m.id] = { status: 'error', error: err.message, elapsed: Date.now() - start, model: m };
     } finally {
       updateCard(m.id, resultsMap[m.id]);
     }
@@ -136,28 +145,29 @@ function finalise(resultsMap) {
   const failed     = all.filter(r => r.status === 'error');
 
   setStatus('done', `Done — ${successful.length} succeeded, ${failed.length} failed.`);
-
   if (successful.length === 0) return;
 
-  // Sort by latency to find the winner
+  // Sort by latency — winner = fastest
   successful.sort((a, b) => a.elapsed - b.elapsed);
   const winner = successful[0];
   markWinner(winner.model.id);
 
-  // Summary metric cards
-  const avgElapsed = Math.round(successful.reduce((s, r) => s + r.elapsed, 0) / successful.length);
-  const avgTokens  = Math.round(successful.reduce((s, r) => s + r.tokens,  0) / successful.length);
-
-  renderSummary({
-    total:      all.length,
-    success:    successful.length,
-    failed:     failed.length,
-    fastest:    winner,
-    avgElapsed,
-    avgTokens,
+  // Best throughput = most output tokens per second
+  const bestTps = successful.reduce((best, r) => {
+    const tps = r.tokens / (r.elapsed / 1000);
+    return tps > (best.tokens / (best.elapsed / 1000)) ? r : best;
   });
 
-  // Charts
-  buildLatencyChart(all, document.getElementById('latencyChart'));
+  const avgElapsed     = Math.round(successful.reduce((s, r) => s + r.elapsed,     0) / successful.length);
+  const avgTokens      = Math.round(successful.reduce((s, r) => s + r.tokens,      0) / successful.length);
+  const avgTotalTokens = Math.round(successful.reduce((s, r) => s + r.totalTokens, 0) / successful.length);
+
+  renderSummary({
+    total: all.length, success: successful.length, failed: failed.length,
+    fastest: winner, bestTps,
+    avgElapsed, avgTokens, avgTotalTokens,
+  });
+
+  buildAllCharts(all);
   buildCompareTable(all, document.getElementById('compareBody'));
 }

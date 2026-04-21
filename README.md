@@ -30,7 +30,7 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ★ **Light/dark theme support:** A toggle button in the header switches between themes, persisted to `localStorage` and respecting `prefers-color-scheme` on first visit. Theme switching is zero-flash: `initTheme()` runs before the first render, syntax highlighting swaps instantly via a `<link>` href swap, and icon visibility is pure CSS — no JavaScript class manipulation needed.
 
-★ **Provider chips and model filtering:** API key fields are now hidden behind collapsible pill buttons (Gemini, Anthropic, OpenAI) — open only what you use. A filter bar above the model list lets you narrow to a single backend at a glance. Both selections persist across sessions via `localStorage` and survive Ollama re-checks.
+★ **Expanded analytics:** Each run now reports throughput (tok/s), prompt and completion token counts after inference completes. Results are shown across 3 chart tabs (Latency, Throughput, Tokens) and a comparison table. The summary bar gains a best-throughput metric and average total tokens.
 
 ---
 
@@ -49,7 +49,7 @@ lmlab/
 │   ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
 │   ├── api.js          # fetch() wrappers for Ollama, Gemini, Anthropic, and OpenAI
 │   ├── ui.js           # DOM builders (cards, model list, skeletons, status bar, Ollama pill)
-│   ├── charts.js       # Latency bar chart + comparison table
+│   ├── charts.js       # Three chart builders: Latency, Throughput, Tokens + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
 │   └── main.js         # Entry point — wires everything, handles tabs, theme init/toggle
 └── README.md
@@ -237,7 +237,7 @@ export const DEFAULTS = {
 ## Troubleshooting
 
 - **Ollama fails to start — error shown in sidebar:**
-If `ollama serve` cannot be launched, the exact error message is displayed in the status indicator (e.g. "`ollama` not found on `PATH`"). Install Ollama from [ollama.com](https://ollama.com/download), make sure it is on your PATH, then click `↺` to retry.
+If `ollama serve` cannot be launched, the exact error message is displayed in the status indicator (e.g. "`ollama` not found on PATH"). Install Ollama from [ollama.com](https://ollama.com/download), make sure it is on your `PATH`, then click `↺` to retry.
 
 - **Ollama starts but no models appear:**
 Run `ollama list` to confirm models are pulled. Click `↺` to re-run discovery. Models must be pulled before they can appear in the dashboard.
