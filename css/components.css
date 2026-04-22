@@ -518,7 +518,8 @@
   gap:         10px;
 }
 
-.bar-row .bar-label {
+.bar-row .bar-label,
+.bar-group .bar-label {
   width:          120px;
   font-size:      12px;
   color:          var(--text);
@@ -531,14 +532,17 @@
 
 .bar-track {
   flex:          1;
+  min-width:     0;         /* critical: prevents flex child from overflowing parent */
   background:    var(--bg4);
   border-radius: 4px;
   height:        22px;
   overflow:      hidden;
+  position:      relative;
 }
 
 .bar-fill {
   height:      100%;
+  max-width:   100%;        /* never exceed the track — safety cap */
   border-radius: 4px;
   display:     flex;
   align-items: center;
@@ -548,6 +552,7 @@
   color:       var(--bar-label-color);
   transition:  width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  overflow:    hidden;
 }
 
 /* ─── COMPARE TABLE ─────────────────────────────────────────────────────────── */
@@ -954,7 +959,70 @@
 /* Hide the per-item backend badge inside groups (redundant — the header says it) */
 .model-group-body .model-backend { display: none; }
 
+/* ─── GROUPED BAR CHART (token chart: one bar per type per model) ───────────── */
+
+.bar-group {
+  display:     flex;
+  align-items: center;
+  gap:         10px;
+}
+
+.bar-group-tracks {
+  flex:           1;
+  min-width:      0;
+  display:        flex;
+  flex-direction: column;
+  gap:            5px;
+}
+
+.bar-group-tracks .bar-track {
+  height: 52px;
+}
+
+/* Prompt (input) bar fill — plain block, no absolute positioning */
+.bar-fill-in {
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  color:      var(--text);
+}
+
 /* ─── BAR CHART EXTRAS (stacked bars, right-side totals, legend) ─────────────── */
+
+/* Stacked bar fills — both absolutely positioned within .bar-track (position: relative).
+   prompt fill sits at left: 0; completion fill is offset by the prompt percentage
+   via margin-left set inline in charts.js.                                          */
+.bar-fill-prompt {
+  position:    absolute !important;
+  top:         0;
+  left:        0;
+  height:      100%;
+  background:  color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 4px;
+  display:     flex;
+  align-items: center;
+  padding:     0 6px;
+  font-size:   10px;
+  font-family: var(--font-code);
+  color:       var(--text);
+  white-space: nowrap;
+  overflow:    hidden;
+  max-width:   100%;
+}
+
+.bar-fill-completion {
+  position:    absolute !important;
+  top:         0;
+  height:      100%;
+  border-radius: 4px;
+  display:     flex;
+  align-items: center;
+  padding:     0 6px;
+  font-size:   10px;
+  font-family: var(--font-code);
+  color:       var(--bar-label-color);
+  white-space: nowrap;
+  overflow:    hidden;
+  max-width:   100%;
+}
 
 /* Value label to the right of the bar track (used by token chart) */
 .bar-total {
@@ -964,37 +1032,6 @@
   white-space:  nowrap;
   flex-shrink:  0;
   min-width:    70px;
-}
-
-/* Prompt-token fill — muted background color */
-.bar-fill-prompt {
-  background:  color-mix(in srgb, var(--muted) 35%, transparent) !important;
-  position:    absolute;
-  top:         0;
-  left:        0;
-  height:      100%;
-  font-size:   10px;
-  display:     flex;
-  align-items: center;
-  padding:     0 6px;
-  color:       var(--text);
-  white-space: nowrap;
-  overflow:    hidden;
-}
-
-/* Completion-token fill — model accent color, sits after prompt segment */
-.bar-fill-completion {
-  position:    absolute;
-  top:         0;
-  left:        0;   /* actual left set via margin-left in JS? No — use two-layer approach */
-  height:      100%;
-  display:     flex;
-  align-items: center;
-  padding:     0 6px;
-  font-size:   10px;
-  color:       rgba(255,255,255,0.85);
-  white-space: nowrap;
-  overflow:    hidden;
 }
 
 /* Legend row */

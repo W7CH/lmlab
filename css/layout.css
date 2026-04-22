@@ -161,10 +161,12 @@ header {
 .content {
   flex:           1;
   overflow-y:     auto;
+  overflow-x:     hidden;   /* prevent chart bars from causing horizontal scroll */
   padding:        20px 24px;
   display:        flex;
   flex-direction: column;
   gap:            20px;
+  min-width:      0;        /* let this flex child shrink properly */
 }
 
 /* ─── SECTION HEADER ─────────────────────────────────────────────────────────── */

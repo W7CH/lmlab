@@ -78,44 +78,47 @@ export function buildTokenChart(results, container) {
 
   if (ok.length === 0) return;
 
-  const max = Math.max(...ok.map(r => r.totalTokens ?? r.tokens));
+  const hasAnyPrompt  = ok.some(r => (r.promptTokens ?? 0) > 0);
+  const maxPrompt     = hasAnyPrompt ? Math.max(...ok.map(r => r.promptTokens ?? 0)) : 0;
+  const maxCompletion = Math.max(...ok.map(r => r.tokens));
 
   ok.forEach(r => {
     const total      = r.totalTokens ?? r.tokens;
     const prompt     = r.promptTokens ?? 0;
     const completion = r.tokens;
-    // Widths relative to max total so bars are proportional across models
-    const pctPrompt     = Math.max(0, (prompt     / max) * 100);
-    const pctCompletion = Math.max(2, (completion / max) * 100);
-    const hasPrompt     = prompt > 0;
+    // Each bar type has its own scale so both rows fill the available width
+    const pctPrompt     = maxPrompt     > 0 ? Math.max(2, (prompt     / maxPrompt)     * 100) : 0;
+    const pctCompletion = maxCompletion > 0 ? Math.max(2, (completion / maxCompletion) * 100) : 2;
 
-    const row = document.createElement('div');
-    row.className = 'bar-row';
-    row.innerHTML = `
+    const group = document.createElement('div');
+    group.className = 'bar-group';
+    group.innerHTML = `
       <span class="bar-label">${r.model.label}</span>
-      <div class="bar-track" style="display: flex; overflow: hidden;">
-        ${hasPrompt ? `<div class="bar-fill bar-fill-prompt" style="width: ${pctPrompt.toFixed(1)}%; flex-shrink: 0;">
-          ${pctPrompt > 8 ? prompt : ''}
+      <div class="bar-group-tracks">
+        ${hasAnyPrompt ? `<div class="bar-track">
+          <div class="bar-fill bar-fill-in" style="width: ${pctPrompt.toFixed(1)}%;">
+            ${pctPrompt > 8 ? prompt : ''}
+          </div>
         </div>` : ''}
-        <div class="bar-fill" style="width: ${pctCompletion.toFixed(1)}%; background: ${r.model.color}; flex-shrink: 0;">
-          ${pctCompletion > 8 ? completion : ''}
+        <div class="bar-track">
+          <div class="bar-fill" style="width: ${pctCompletion.toFixed(1)}%; background: ${r.model.color};">
+            ${pctCompletion > 5 ? completion : ''}
+          </div>
         </div>
       </div>
       <span class="bar-total">${total} tok</span>
     `;
-    container.appendChild(row);
+    container.appendChild(group);
   });
 
   // Legend
-  if (ok.some(r => (r.promptTokens ?? 0) > 0)) {
-    const legend = document.createElement('div');
-    legend.className = 'chart-legend';
-    legend.innerHTML = `
-      <span class="legend-dot legend-prompt"></span><span>Prompt tokens</span>
-      <span class="legend-dot legend-completion"></span><span>Completion tokens</span>
-    `;
-    container.appendChild(legend);
-  }
+  const legend = document.createElement('div');
+  legend.className = 'chart-legend';
+  legend.innerHTML = `
+    ${hasAnyPrompt ? '<span class="legend-dot legend-prompt"></span><span>Prompt tokens</span>' : ''}
+    <span class="legend-dot legend-completion"></span><span>Completion tokens</span>
+  `;
+  container.appendChild(legend);
 }
 
 // ─── COMPARE TABLE ────────────────────────────────────────────────────────────
