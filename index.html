@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236c8bff'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-family='system-ui' font-size='60' font-weight='bold' fill='white'>Lab</text></svg>">
+  <title>LMLab</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Syntax highlighting.
+       id="hljs-theme" href is swapped by applyTheme() in main.js. -->
+  <link
+    id="hljs-theme"
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+  <!-- Styles (load order matters: variables → layout → components) -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- App entry point (ES module; imports config, api, ui, eval, charts) -->
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="25" fill="#6c8bff"/>
+          <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+                font-family="system-ui" font-size="55" font-weight="bold" fill="white">
+            Lab
+          </text>
+        </svg>
+      </div>
+      <div>
+        <h1>LMLab</h1>
+        <span>Ollama · Gemini · Anthropic · OpenAI</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-badge" id="runTimer">ready</div>
+      <button class="theme-btn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme">
+        <!-- Moon: visible in dark mode → click to go light -->
+        <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+        <!-- Sun: visible in light mode → click to go dark -->
+        <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1"  x2="12" y2="3"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="1"  y1="12" x2="3"  y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MAIN SPLIT LAYOUT
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="main">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Prompt textarea + presets -->
+      <div>
+        <div class="section-label">Prompt</div>
+        <div class="prompt-box">
+          <label for="promptInput">Task prompt</label>
+          <textarea
+            id="promptInput"
+            placeholder="Write a Python function that…"
+          >Write a Python function that checks if a string is a palindrome, handles edge cases (empty string, spaces, punctuation), and includes docstring + type hints + 3 unit tests using unittest.</textarea>
+          <div class="prompt-presets" id="presetContainer">
+            <!-- Injected by ui.js → renderPresets() -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ── API KEYS ────────────────────────────────────────────────── -->
+      <div>
+        <!--
+          Collapsible section. The section-label acts as the trigger.
+          Clicking it toggles the .expanded class on #apiKeysBody.
+        -->
+        <button class="section-label section-label-toggle" id="apiKeysToggle"
+                aria-expanded="false" aria-controls="apiKeysBody">
+          API Keys
+          <span class="toggle-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <div class="collapsible-body" id="apiKeysBody" aria-hidden="true">
+          <!--
+            One row per provider. Each row has a toggle checkbox + label on the left
+            and the key input on the right — the input is hidden until the row is active.
+          -->
+          <div class="provider-row" id="providerRow-gemini" data-provider="gemini">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Gemini</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="geminiKeyInput"
+                     placeholder="AIzaSy…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-anthropic" data-provider="anthropic">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Anthropic</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="anthropicKeyInput"
+                     placeholder="sk-ant-…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-openai" data-provider="openai">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">OpenAI</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="openaiKeyInput"
+                     placeholder="sk-…" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ollama status indicator -->
+      <div>
+        <div class="section-label">Ollama</div>
+        <div class="ollama-status-pill ollama-status-unknown" id="ollamaStatusPill">
+          <div class="ollama-status-dot" id="ollamaStatusDot"></div>
+          <div class="ollama-status-text">
+            <span class="ollama-status-label" id="ollamaStatusLabel">Checking…</span>
+            <span class="ollama-status-sub"   id="ollamaStatusSub"></span>
+          </div>
+          <button class="ollama-check-btn" id="ollamaCheckBtn" title="Re-check">↺</button>
+        </div>
+      </div>
+
+      <!-- Generation parameters -->
+      <div>
+        <div class="section-label">Parameters</div>
+        <div class="settings-block">
+          <div class="setting-row">
+            <label for="tempInput">Temperature</label>
+            <input type="number" id="tempInput" min="0" max="2" step="0.1" />
+          </div>
+          <div class="setting-row">
+            <label for="maxTokensInput">Max tokens</label>
+            <input type="number" id="maxTokensInput" min="128" max="4096" step="128" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODELS ──────────────────────────────────────────────────── -->
+      <div>
+        <!--
+          Collapsible section header.
+        -->
+        <button class="section-label section-label-toggle" id="modelsToggle"
+                aria-expanded="true" aria-controls="modelsBody">
+          Models
+          <span class="toggle-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <!--
+          Model list — injected by ui.js → renderModelList().
+          renderModelList groups models by backend and renders each group
+          as a collapsible sub-section inside this container.
+        -->
+        <div class="collapsible-body collapsible-body--open" id="modelsBody" aria-hidden="false">
+          <div class="model-list" id="modelList"></div>
+        </div>
+      </div>
+
+      <!-- Run button -->
+      <button class="run-btn" id="runBtn">
+        <span>▶</span> Run Evaluation
+      </button>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ── CONTENT AREA ─────────────────────────────────────────────── -->
+    <main class="content">
+
+      <!-- Status bar -->
+      <div class="status-bar" id="statusBar">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Select models and click "Run Evaluation" to start.</span>
+      </div>
+
+      <!-- Summary + tabs (hidden until first run) -->
+      <div id="summarySection" class="hidden">
+        <div class="section-header">
+          <h2>Run Summary</h2>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="results">Results</button>
+            <button class="tab-btn"        data-tab="compare">Compare</button>
+            <button class="tab-btn"        data-tab="chart">Latency</button>
+            <button class="tab-btn"        data-tab="throughput">Throughput</button>
+            <button class="tab-btn"        data-tab="tokens">Tokens</button>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <div class="metric-card">
+            <div class="metric-label">Models run</div>
+            <div class="metric-val"  id="metricModels">—</div>
+            <div class="metric-sub" id="metricSuccess">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Fastest response</div>
+            <div class="metric-val"  id="metricFastest">—</div>
+            <div class="metric-sub" id="metricFastestModel">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg latency</div>
+            <div class="metric-val"  id="metricAvg">—</div>
+            <div class="metric-sub">across all models</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Best throughput</div>
+            <div class="metric-val"  id="metricTps">—</div>
+            <div class="metric-sub" id="metricTpsModel">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg total tokens</div>
+            <div class="metric-val"  id="metricTokens">—</div>
+            <div class="metric-sub">prompt + completion</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: Results grid ──────────────────────────────────────────── -->
+      <div id="tabResults">
+        <div class="results-grid" id="resultsGrid"></div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">◎</div>
+          <div class="empty-title">No results yet</div>
+          <div class="empty-sub">
+            Configure your prompt and models on the left, then click Run Evaluation.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: Compare table ─────────────────────────────────────────── -->
+      <div id="tabCompare" class="hidden">
+        <div class="compare-wrapper">
+          <table class="compare-table" id="compareTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Model</th>
+                <th>Backend</th>
+                <th>Latency</th>
+                <th>Tok / s</th>
+                <th>Prompt tok</th>
+                <th>Completion tok</th>
+                <th>Total tok</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="compareBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── TAB: Latency chart -->
+      <div id="tabChart" class="hidden">
+        <p class="chart-title">Response latency — lower is faster</p>
+        <div class="bar-chart" id="latencyChart"></div>
+      </div>
+
+      <!-- Throughput chart -->
+      <div id="tabThroughput" class="hidden">
+        <p class="chart-title">Output throughput (tok / s) — higher is faster</p>
+        <div class="bar-chart" id="throughputChart"></div>
+      </div>
+
+      <!-- Token usage chart -->
+      <div id="tabTokens" class="hidden">
+        <p class="chart-title">Token usage — prompt + completion (lower = more efficient)</p>
+        <div class="bar-chart" id="tokenChart"></div>
+      </div>
+
+    </main><!-- /content -->
+  </div><!-- /main -->
+
+</body>
+</html>
