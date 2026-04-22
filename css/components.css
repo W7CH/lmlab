@@ -975,10 +975,6 @@
   gap:            5px;
 }
 
-.bar-group-tracks .bar-track {
-  height: 52px;
-}
-
 /* Prompt (input) bar fill — plain block, no absolute positioning */
 .bar-fill-in {
   background: color-mix(in srgb, var(--muted) 35%, transparent);
@@ -1055,3 +1051,124 @@
 
 .legend-prompt     { background: color-mix(in srgb, var(--muted) 35%, transparent); }
 .legend-completion { background: var(--accent); }
+
+/* ─── SHARE BUTTON (injected into #summarySection .section-header) ──────────── */
+.share-btn {
+  display:       flex;
+  align-items:   center;
+  gap:           5px;
+  padding:       5px 12px;
+  background:    transparent;
+  border:        1px solid var(--border2);
+  border-radius: 8px;
+  color:         var(--muted);
+  font-family:   var(--font-ui);
+  font-size:     12px;
+  font-weight:   500;
+  cursor:        pointer;
+  transition:    border-color 0.15s, color 0.15s, background 0.15s;
+  white-space:   nowrap;
+}
+
+.share-btn:hover {
+  border-color: var(--accent);
+  color:        var(--accent);
+  background:   color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.share-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.share-icon { font-size: 13px; line-height: 1; }
+
+/* ─── VIEWER LAYOUT ──────────────────────────────────────────────────────────── */
+
+/* Full-width single-column container for viewer.html */
+.viewer-wrap {
+  max-width:  980px;
+  margin:     0 auto;
+  padding:    24px 28px 48px;
+  display:    flex;
+  flex-direction: column;
+  gap:        20px;
+}
+
+/* ── Viewer badge ("View only") in the header ──────────────────────────────── */
+.viewer-badge {
+  font-size:     10px;
+  font-weight:   700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color:         var(--muted);
+  background:    var(--bg4);
+  border:        1px solid var(--border2);
+  border-radius: 20px;
+  padding:       3px 10px;
+}
+
+/* ── Prompt display box ─────────────────────────────────────────────────────── */
+.viewer-prompt-box {
+  background:    var(--bg2);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:       16px 20px;
+  transition:    background 0.2s, border-color 0.2s;
+}
+
+.viewer-prompt-meta {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  margin-bottom:   10px;
+}
+
+.viewer-timestamp {
+  font-size:   10px;
+  font-family: var(--font-code);
+  color:       var(--muted);
+}
+
+.viewer-prompt-text {
+  font-family:  var(--font-code);
+  font-size:    12px;
+  color:        var(--text);
+  line-height:  1.65;
+  white-space:  pre-wrap;
+  word-break:   break-word;
+  margin-bottom: 10px;
+}
+
+.viewer-params {
+  font-size:   11px;
+  font-family: var(--font-code);
+  color:       var(--muted);
+}
+
+/* ── Error state ────────────────────────────────────────────────────────────── */
+.viewer-error {
+  background:    rgba(248, 113, 113, 0.07);
+  border:        1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius);
+  padding:       14px 18px;
+  font-size:     13px;
+  color:         var(--danger);
+  line-height:   1.5;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+.viewer-footer {
+  margin-top:  8px;
+  padding-top: 20px;
+  border-top:  1px solid var(--border);
+  text-align:  center;
+}
+
+.viewer-footer a {
+  font-size:       11px;
+  color:           var(--muted);
+  text-decoration: none;
+  font-family:     var(--font-ui);
+  letter-spacing:  0.3px;
+  transition:      color 0.15s;
+}
+
+.viewer-footer a:hover { color: var(--accent); }

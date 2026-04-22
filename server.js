@@ -261,8 +261,9 @@ async function proxyToAnthropic(req, res) {
 const ROOT = path.resolve('.');   // serve from the project root
 
 async function serveStatic(req, res) {
-  // Resolve URL to a file path; default to index.html
-  let filePath = path.join(ROOT, req.url === '/' ? 'index.html' : req.url);
+  // Strip query string before resolving to a file path (e.g. /viewer.html?data=… → viewer.html)
+  const urlPath = req.url.split('?')[0];
+  let filePath = path.join(ROOT, urlPath === '/' ? 'index.html' : urlPath);
 
   // Security: prevent directory traversal
   if (!filePath.startsWith(ROOT)) {

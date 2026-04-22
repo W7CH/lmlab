@@ -25,6 +25,7 @@ import {
   renderSummary,
 } from './ui.js';
 import { buildAllCharts, buildCompareTable } from './charts.js';
+import { showShareButton } from './share.js';
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,7 @@ export async function runEval(models, selectedIds) {
   runBtn.disabled = false;
 
   finalise(resultsMap);
+  showShareButton(prompt, temperature, maxTokens, resultsMap);
 }
 
 // ─── PRIVATE ──────────────────────────────────────────────────────────────────
