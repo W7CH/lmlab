@@ -702,156 +702,257 @@
   cursor:  not-allowed;
 }
 
-/* ─── PROVIDER CHIP SELECTOR (API Keys section) ─────────────────────────────── */
+/* ─── COLLAPSIBLE SECTION HEADERS ─────────────────────────────────────────────
+ *
+ * Used for both "API Keys" and "Models" top-level sidebar sections.
+ * The section label doubles as a toggle button.
+ * ──────────────────────────────────────────────────────────────────────────── */
 
-/*
- * A row of multi-select chips. Each chip toggles one provider's key panel.
- * Active state is driven by aria-pressed and the .active class — both set
- * together by initProviderChips() in main.js.
- */
-.provider-chips {
-  display:    flex;
-  flex-wrap:  wrap;
-  gap:        6px;
-  margin-bottom: 8px;
+.section-label-toggle {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  width:           100%;
+  background:      transparent;
+  border:          none;
+  padding:         0;
+  cursor:          pointer;
+  font-family:     inherit;
+  font-size:       10px;
+  font-weight:     700;
+  letter-spacing:  1.2px;
+  color:           var(--muted);
+  text-transform:  uppercase;
+  margin-bottom:   8px;
+  user-select:     none;
+  transition:      color 0.15s;
 }
 
-.provider-chip {
-  display:       inline-flex;
-  align-items:   center;
-  gap:           5px;
-  padding:       5px 10px;
-  border-radius: 20px;
-  border:        1px solid var(--border2);
-  background:    var(--bg4);
-  color:         var(--muted);
-  font-size:     11px;
-  font-family:   var(--font-ui);
-  font-weight:   500;
-  cursor:        pointer;
-  user-select:   none;
-  transition:    background 0.15s, border-color 0.15s, color 0.15s;
+.section-label-toggle:hover { color: var(--text); }
+
+/* The › chevron rotates 90° when the section is open */
+.section-label-toggle .toggle-chevron {
+  font-size:   13px;
+  line-height: 1;
+  transition:  transform 0.2s ease;
+  color:       var(--muted);
 }
 
-.provider-chip:hover {
-  border-color: var(--border2);
-  color:        var(--text);
-  background:   var(--bg3);
+.section-label-toggle[aria-expanded="true"] .toggle-chevron {
+  transform: rotate(90deg);
 }
 
-/* Active chip — filled accent style */
-.provider-chip.active,
-.provider-chip[aria-pressed="true"] {
-  background:   var(--accent);
-  border-color: var(--accent);
-  color:        #fff;
+/* ─── COLLAPSIBLE BODY ─────────────────────────────────────────────────────────
+ *
+ * Height-based collapse: max-height: 0 → overflow hidden when closed.
+ * max-height: 600px covers all realistic model list sizes.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.collapsible-body {
+  max-height:   0;
+  overflow:     hidden;
+  transition:   max-height 0.25s ease, opacity 0.2s ease;
+  opacity:      0;
 }
 
-/* Provider-specific accent colors for the active state */
-.provider-chip[data-provider="gemini"].active     { background: var(--success); border-color: var(--success); }
-.provider-chip[data-provider="openai"].active     { background: #10a37f;        border-color: #10a37f; }
-.provider-chip[data-provider="anthropic"].active  { background: #cd6f32;        border-color: #cd6f32; }
+.collapsible-body--open {
+  max-height:   800px;   /* generous ceiling — real height is always smaller */
+  opacity:      1;
+}
 
-/* ─── KEY PANELS (collapsible, one per provider) ─────────────────────────────── */
+/* ─── API KEY PROVIDER ROWS ────────────────────────────────────────────────────
+ *
+ * Inside #apiKeysBody. Each row is a clickable header + hidden input below.
+ * ──────────────────────────────────────────────────────────────────────────── */
 
-/*
- * Key panels use the [hidden] attribute for show/hide (set via JS).
- * The CSS handles the visual styling once they are visible.
- * A subtle entrance animation avoids a jarring pop.
- */
-.key-panel {
-  display:       flex;
-  flex-direction: column;
-  gap:           5px;
-  padding:       10px 12px;
-  background:    var(--bg3);
-  border:        1px solid var(--border2);
+.provider-row {
+  border:        1px solid var(--border);
   border-radius: var(--radius);
-  margin-top:    6px;
-  animation:     panelReveal 0.18s ease;
-  transition:    background 0.2s, border-color 0.2s;
+  overflow:      hidden;
+  margin-bottom: 5px;
+  transition:    border-color 0.15s;
 }
 
-@keyframes panelReveal {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+.provider-row:last-child { margin-bottom: 0; }
+
+.provider-row:has(.provider-row-header.active) {
+  border-color: var(--border2);
 }
 
-.key-panel label {
-  font-size:  11px;
-  color:      var(--muted);
+.provider-row-header {
+  display:         flex;
+  align-items:     center;
+  gap:             8px;
+  width:           100%;
+  padding:         8px 10px;
+  background:      var(--bg3);
+  border:          none;
+  cursor:          pointer;
+  user-select:     none;
+  transition:      background 0.15s;
+}
+
+.provider-row-header:hover { background: var(--bg4); }
+
+.provider-row-header.active { background: var(--bg4); }
+
+.provider-row-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--border2);
+  flex-shrink:   0;
+  transition:    background 0.15s;
+}
+
+/* Dot gets a color when the row is active (input visible) */
+[data-provider="gemini"]    .provider-row-header.active .provider-row-dot { background: var(--success); }
+[data-provider="openai"]    .provider-row-header.active .provider-row-dot { background: #10a37f; }
+[data-provider="anthropic"] .provider-row-header.active .provider-row-dot { background: #cd6f32; }
+
+.provider-row-name {
+  flex:        1;
+  font-size:   12px;
   font-weight: 500;
-}
-
-.key-panel input[type="password"] {
-  width:       100%;
-  background:  var(--bg4);
-  border:      1px solid var(--border2);
-  border-radius: 6px;
-  padding:     5px 8px;
-  font-size:   11px;
   color:       var(--text);
-  font-family: var(--font-code);
-  outline:     none;
-  transition:  border-color 0.15s, background 0.2s;
+  text-align:  left;
 }
 
-.key-panel input[type="password"]:focus {
+.provider-row-chevron {
+  font-size:   13px;
+  color:       var(--muted);
+  transition:  transform 0.18s ease;
+  line-height: 1;
+}
+
+.provider-row-header[aria-expanded="true"] .provider-row-chevron {
+  transform: rotate(90deg);
+}
+
+.provider-row-body {
+  padding:    8px 10px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+}
+
+.provider-row-body input[type="password"] {
+  width:         100%;
+  background:    var(--bg4);
+  border:        1px solid var(--border2);
+  border-radius: 6px;
+  padding:       5px 8px;
+  font-size:     11px;
+  color:         var(--text);
+  font-family:   var(--font-code);
+  outline:       none;
+  transition:    border-color 0.15s, background 0.2s;
+}
+
+.provider-row-body input[type="password"]:focus {
   border-color: var(--accent);
 }
 
-/* ─── MODEL FILTER BAR ───────────────────────────────────────────────────────── */
+/* ─── MODEL GROUP ACCORDION ───────────────────────────────────────────────────
+ *
+ * Inside #modelsBody. Each backend is a collapsible group.
+ * ──────────────────────────────────────────────────────────────────────────── */
 
-/*
- * A single-select pill bar that sits above the model list.
- * Clicking a pill hides all model items that don't match that backend.
- * The DOM items stay in the tree so selection state is preserved.
- */
-.model-filter-bar {
-  display:    flex;
-  flex-wrap:  wrap;
-  gap:        4px;
-  margin-bottom: 8px;
+.model-group {
+  margin-bottom: 5px;
 }
 
-.model-filter-btn {
-  padding:       3px 9px;
-  border-radius: 20px;
-  border:        1px solid var(--border2);
-  background:    transparent;
-  color:         var(--muted);
-  font-size:     10px;
-  font-family:   var(--font-ui);
-  font-weight:   500;
-  cursor:        pointer;
-  user-select:   none;
-  transition:    background 0.15s, border-color 0.15s, color 0.15s;
+.model-group:last-child { margin-bottom: 0; }
+
+.model-group-header {
+  display:         flex;
+  align-items:     center;
+  gap:             6px;
+  width:           100%;
+  padding:         6px 10px;
+  background:      var(--bg4);
+  border:          1px solid var(--border);
+  border-radius:   var(--radius);
+  cursor:          pointer;
+  user-select:     none;
+  font-family:     var(--font-ui);
+  transition:      background 0.15s, border-color 0.15s;
+}
+
+.model-group-header:hover { border-color: var(--border2); }
+
+.model-group-header[aria-expanded="true"] {
+  border-bottom-left-radius:  0;
+  border-bottom-right-radius: 0;
+  border-bottom-color:        transparent;
+}
+
+.model-group-name {
+  font-size:   11px;
+  font-weight: 700;
+  color:       var(--text);
+  flex:        1;
+  text-align:  left;
   letter-spacing: 0.2px;
 }
 
-.model-filter-btn:hover {
-  color:        var(--text);
-  border-color: var(--border2);
+.model-group-count {
+  font-size:     10px;
+  font-family:   var(--font-code);
+  color:         var(--muted);
+  background:    var(--bg3);
+  border:        1px solid var(--border);
+  border-radius: 10px;
+  padding:       1px 6px;
 }
 
-.model-filter-btn.active {
-  background:   var(--bg4);
-  border-color: var(--accent);
-  color:        var(--accent);
+.model-group-sel {
+  font-size:   10px;
+  font-family: var(--font-code);
+  color:       var(--accent);
+  font-weight: 500;
 }
 
-/* Backend-specific active tints */
-.model-filter-btn[data-backend="ollama"].active    { border-color: var(--accent2);  color: var(--accent2);  }
-.model-filter-btn[data-backend="gemini"].active    { border-color: var(--success);  color: var(--success);  }
-.model-filter-btn[data-backend="openai"].active    { border-color: #10a37f;         color: #10a37f;         }
-.model-filter-btn[data-backend="anthropic"].active { border-color: #cd6f32;         color: #cd6f32;         }
-
-/* Empty-filter hint (rendered by applyModelFilter) */
-.model-filter-empty {
-  font-size: 11px;
-  color:     var(--muted);
-  padding:   6px 2px;
+.model-group-header .toggle-chevron {
+  font-size:   13px;
+  color:       var(--muted);
+  transition:  transform 0.18s ease;
+  line-height: 1;
+  flex-shrink: 0;
 }
+
+.model-group-header[aria-expanded="true"] .toggle-chevron {
+  transform: rotate(90deg);
+}
+
+/* Group body — collapsed by default, opened by the JS toggle */
+.model-group-body {
+  max-height:    0;
+  overflow:      hidden;
+  transition:    max-height 0.22s ease, opacity 0.18s ease;
+  opacity:       0;
+  border:        1px solid var(--border);
+  border-top:    none;
+  border-bottom-left-radius:  var(--radius);
+  border-bottom-right-radius: var(--radius);
+  background:    var(--bg3);
+}
+
+.model-group-body--open {
+  max-height: 600px;
+  opacity:    1;
+}
+
+/* Model items inside a group — no outer border (group provides it) */
+.model-group-body .model-item {
+  border-radius: 0;
+  border:        none;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-group-body .model-item:last-child { border-bottom: none; }
+
+/* Hide the per-item backend badge inside groups (redundant — the header says it) */
+.model-group-body .model-backend { display: none; }
 
 /* ─── BAR CHART EXTRAS (stacked bars, right-side totals, legend) ─────────────── */
 

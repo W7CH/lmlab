@@ -29,17 +29,20 @@ export function setStatus(type, message) {
 
 // ─── MODEL LIST ───────────────────────────────────────────────────────────────
 
+const BACKEND_ORDER  = ['ollama', 'gemini', 'openai', 'anthropic'];
+const BACKEND_LABELS = { ollama: 'Ollama', gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Anthropic' };
+
+// localStorage key for tracking which backend groups are collapsed
+const KEY_MODEL_GROUPS = 'llm-eval-model-groups-collapsed';
+
 /**
- * Show a skeleton or error inside the model list container while loading.
- * @param {'loading'|'error'} state
- * @param {string} [message]
+ * Show a skeleton loading state inside the model list container.
  */
 export function setModelListState(state, message = '') {
   const container = document.getElementById('modelList');
   if (!container) return;
 
   if (state === 'loading') {
-    // Render skeleton rows that match the height of real model items
     container.innerHTML = Array.from({ length: 4 }, () => `
       <div class="model-item-skeleton">
         <div class="skeleton-dot"></div>
@@ -58,18 +61,32 @@ export function setModelListState(state, message = '') {
 }
 
 /**
- * Render the model toggle list.
- * Returns a Set<string> of currently-active model IDs (mutated on click).
+ * Render models grouped by backend, each group in a collapsible accordion.
  *
- * Each item is given data-backend so the filter bar can show/hide groups
- * without touching selection state.
+ * Structure per group:
+ *   <div class="model-group">
+ *     <button class="model-group-header">  ← click to collapse/expand
+ *       <span>Ollama</span>
+ *       <span class="model-group-count">3</span>
+ *       <span class="toggle-chevron">›</span>
+ *     </button>
+ *     <div class="model-group-body">
+ *       <div class="model-item"> … </div>
+ *       …
+ *     </div>
+ *   </div>
+ *
+ * Collapsed-group IDs are persisted to localStorage so state survives refresh.
+ * Selection state (Set<string>) is preserved across re-renders because
+ * `selected` is mutated in-place by click handlers.
  *
  * @param {Array}       models
  * @param {HTMLElement} container
  * @returns {Set<string>}
  */
 export function renderModelList(models, container) {
-  const selected = new Set(models.filter(m => m.active).map(m => m.id));
+  const selected  = new Set(models.filter(m => m.active).map(m => m.id));
+  const collapsed = loadCollapsedGroups();
 
   container.innerHTML = '';
 
@@ -82,68 +99,119 @@ export function renderModelList(models, container) {
     return selected;
   }
 
+  // Group models by backend, preserving BACKEND_ORDER
+  const groups = {};
+  BACKEND_ORDER.forEach(b => { groups[b] = []; });
   models.forEach(m => {
-    const item = document.createElement('div');
-    item.className        = `model-item${selected.has(m.id) ? ' active' : ''}`;
-    item.dataset.id       = m.id;
-    item.dataset.backend  = m.backend;   // used by applyModelFilter()
+    if (!groups[m.backend]) groups[m.backend] = [];
+    groups[m.backend].push(m);
+  });
 
-    // Size badge — only for Ollama models that have size info
-    const sizeBadge = m.meta?.sizeGb
-      ? `<span class="model-size">${m.meta.sizeGb} GB</span>`
-      : '';
+  BACKEND_ORDER.forEach(backend => {
+    const group = groups[backend];
+    if (!group || group.length === 0) return;
 
-    item.innerHTML = `
-      <div class="model-dot" style="--model-color: ${m.color};"></div>
-      <span class="model-name" title="${m.id}">${m.label}</span>
-      ${sizeBadge}
-      <span class="model-backend">${m.backend}</span>
+    const isCollapsed = collapsed.has(backend);
+
+    // ── Group wrapper ────────────────────────────────────────────────────────
+    const groupEl = document.createElement('div');
+    groupEl.className        = 'model-group';
+    groupEl.dataset.backend  = backend;
+
+    // ── Header button ────────────────────────────────────────────────────────
+    const header = document.createElement('button');
+    header.className        = 'model-group-header';
+    header.setAttribute('aria-expanded', String(!isCollapsed));
+    const selectedCount = group.filter(m => selected.has(m.id)).length;
+    header.innerHTML = `
+      <span class="model-group-name">${BACKEND_LABELS[backend] ?? backend}</span>
+      <span class="model-group-count">${group.length}</span>
+      ${selectedCount > 0
+        ? `<span class="model-group-sel">${selectedCount} selected</span>`
+        : ''}
+      <span class="toggle-chevron" aria-hidden="true">›</span>
     `;
 
-    item.addEventListener('click', () => {
-      if (selected.has(m.id)) {
-        selected.delete(m.id);
-        item.classList.remove('active');
-      } else {
-        selected.add(m.id);
-        item.classList.add('active');
-      }
+    // ── Body ─────────────────────────────────────────────────────────────────
+    const body = document.createElement('div');
+    body.className = `model-group-body${isCollapsed ? '' : ' model-group-body--open'}`;
+
+    group.forEach(m => {
+      const item = document.createElement('div');
+      item.className   = `model-item${selected.has(m.id) ? ' active' : ''}`;
+      item.dataset.id  = m.id;
+
+      // Size badge — only for Ollama models that have size info
+      const sizeBadge = m.meta?.sizeGb
+        ? `<span class="model-size">${m.meta.sizeGb} GB</span>`
+        : '';
+
+      item.innerHTML = `
+        <div class="model-dot" style="--model-color: ${m.color};"></div>
+        <span class="model-name" title="${m.id}">${m.label}</span>
+        ${sizeBadge}
+      `;
+
+      item.addEventListener('click', () => {
+        if (selected.has(m.id)) {
+          selected.delete(m.id);
+          item.classList.remove('active');
+        } else {
+          selected.add(m.id);
+          item.classList.add('active');
+        }
+        // Update the "N selected" counter in the header
+        refreshGroupCounter(header, group, selected);
+      });
+
+      body.appendChild(item);
     });
 
-    container.appendChild(item);
+    // ── Toggle handler ────────────────────────────────────────────────────────
+    header.addEventListener('click', () => {
+      const nowOpen = body.classList.toggle('model-group-body--open');
+      header.setAttribute('aria-expanded', String(nowOpen));
+      if (nowOpen) {
+        collapsed.delete(backend);
+      } else {
+        collapsed.add(backend);
+      }
+      saveCollapsedGroups(collapsed);
+    });
+
+    groupEl.appendChild(header);
+    groupEl.appendChild(body);
+    container.appendChild(groupEl);
   });
 
   return selected;
 }
 
-/**
- * Show only model items that match the given backend, hide the rest.
- * Preserves selection state — a hidden item stays selected.
- * Pass "all" to reveal every item.
- *
- * @param {string} backend  — "all" | "ollama" | "gemini" | "anthropic" | "openai"
- */
-export function applyModelFilter(backend) {
-  const items = document.querySelectorAll('#modelList .model-item');
-  items.forEach(item => {
-    const matches = backend === 'all' || item.dataset.backend === backend;
-    item.style.display = matches ? '' : 'none';
-  });
-
-  // Show a hint if the active filter returns zero visible items
-  const container = document.getElementById('modelList');
-  const anyVisible = [...items].some(i => i.style.display !== 'none');
-  let hint = container.querySelector('.model-filter-empty');
-  if (!anyVisible && items.length > 0) {
-    if (!hint) {
-      hint = document.createElement('div');
-      hint.className = 'model-filter-empty model-list-empty';
-      container.appendChild(hint);
+function refreshGroupCounter(header, group, selected) {
+  const count = group.filter(m => selected.has(m.id)).length;
+  let sel = header.querySelector('.model-group-sel');
+  if (count > 0) {
+    if (!sel) {
+      sel = document.createElement('span');
+      sel.className = 'model-group-sel';
+      // insert before the chevron
+      header.insertBefore(sel, header.querySelector('.toggle-chevron'));
     }
-    hint.textContent = `No ${backend} models available.`;
-  } else if (hint) {
-    hint.remove();
+    sel.textContent = `${count} selected`;
+  } else if (sel) {
+    sel.remove();
   }
+}
+
+function loadCollapsedGroups() {
+  try {
+    const raw = localStorage.getItem(KEY_MODEL_GROUPS);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch { return new Set(); }
+}
+
+function saveCollapsedGroups(set) {
+  localStorage.setItem(KEY_MODEL_GROUPS, JSON.stringify([...set]));
 }
 
 // ─── PRESET BUTTONS ───────────────────────────────────────────────────────────

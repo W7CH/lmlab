@@ -13,14 +13,13 @@
  */
 
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
-import { renderModelList, renderPresets, setOllamaStatus, setModelListState, applyModelFilter } from './ui.js';
+import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
 import { runEval } from './eval.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
 const KEY_THEME    = 'llm-eval-theme';
-const KEY_PROVIDERS = 'llm-eval-providers';   // JSON array of active provider ids
-const KEY_FILTER   = 'llm-eval-model-filter'; // active backend filter string
+const KEY_API_KEYS  = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
 
 // ─── LIVE STATE ───────────────────────────────────────────────────────────────
 
@@ -72,101 +71,90 @@ document.addEventListener('DOMContentLoaded', () => {
   // Theme toggle
   document.getElementById('themeBtn')?.addEventListener('click', toggleTheme);
 
-  // Provider chips (API Keys section)
-  initProviderChips();
+  // Collapsible section toggles (API Keys + Models headers)
+  initSectionToggles();
 
-  // Model filter bar
-  initModelFilter();
+  // API key provider rows (expand/collapse each provider within API Keys)
+  initApiKeyRows();
 
   // Discover models
   refreshModels();
 });
 
-// ─── PROVIDER CHIPS (API KEYS) ────────────────────────────────────────────────
+// ─── SECTION TOGGLES (top-level collapse headers) ────────────────────────────
 
 /**
- * Each chip toggles its matching key panel.
- * Active providers are persisted to localStorage.
- *
- * Chip state: aria-pressed="true|false"
- * Panel visibility: the [hidden] attribute
+ * Wire the "API Keys" and "Models" section-label-toggle buttons.
+ * Each button toggles .collapsible-body--open on its target body element.
+ * State is driven purely by aria-expanded on the button + the CSS class on body.
  */
-function initProviderChips() {
-  const saved = loadProviders();
+function initSectionToggles() {
+  document.querySelectorAll('.section-label-toggle').forEach(btn => {
+    const bodyId = btn.getAttribute('aria-controls');
+    const body   = document.getElementById(bodyId);
+    if (!body) return;
 
-  document.querySelectorAll('.provider-chip').forEach(chip => {
-    const provider = chip.dataset.provider;
-    const isActive = saved.has(provider);
+    // Restore persisted state
+    const key     = `llm-eval-section-${bodyId}`;
+    const savedOpen = localStorage.getItem(key);
+    // Default: API Keys closed, Models open
+    const defaultOpen = bodyId === 'modelsBody';
+    const isOpen = savedOpen !== null ? savedOpen === 'true' : defaultOpen;
 
-    setChipActive(chip, isActive);
-
-    chip.addEventListener('click', () => {
-      const nowActive = chip.getAttribute('aria-pressed') !== 'true';
-      setChipActive(chip, nowActive);
-      saveProviders();
-    });
-  });
-}
-
-function setChipActive(chip, active) {
-  const provider = chip.dataset.provider;
-  chip.setAttribute('aria-pressed', String(active));
-  chip.classList.toggle('active', active);
-
-  const panel = document.getElementById(`keyPanel-${provider}`);
-  if (panel) panel.hidden = !active;
-}
-
-function loadProviders() {
-  try {
-    const raw = localStorage.getItem(KEY_PROVIDERS);
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveProviders() {
-  const active = [...document.querySelectorAll('.provider-chip[aria-pressed="true"]')]
-    .map(c => c.dataset.provider);
-  localStorage.setItem(KEY_PROVIDERS, JSON.stringify(active));
-}
-
-// ─── MODEL FILTER BAR ─────────────────────────────────────────────────────────
-
-/**
- * Single-select filter that shows only models from a given backend.
- * "all" reveals everything.
- *
- * The active filter is persisted to localStorage and re-applied after
- * every refreshModels() call so it survives Ollama re-checks.
- */
-function initModelFilter() {
-  const saved = localStorage.getItem(KEY_FILTER) ?? 'all';
-
-  document.querySelectorAll('.model-filter-btn').forEach(btn => {
-    if (btn.dataset.backend === saved) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
+    applySection(btn, body, isOpen);
 
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.model-filter-btn')
-        .forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const backend = btn.dataset.backend;
-      localStorage.setItem(KEY_FILTER, backend);
-      applyModelFilter(backend);
+      const nowOpen = !body.classList.contains('collapsible-body--open');
+      applySection(btn, body, nowOpen);
+      localStorage.setItem(key, String(nowOpen));
     });
   });
 }
 
-/** Re-apply the persisted filter (called after renderModelList rebuilds the DOM). */
-function reapplyModelFilter() {
-  const backend = localStorage.getItem(KEY_FILTER) ?? 'all';
-  applyModelFilter(backend);
+function applySection(btn, body, open) {
+  btn.setAttribute('aria-expanded', String(open));
+  body.classList.toggle('collapsible-body--open', open);
+  body.setAttribute('aria-hidden', String(!open));
+}
+
+// ─── API KEY PROVIDER ROWS ────────────────────────────────────────────────────
+
+/**
+ * Each provider row inside #apiKeysBody has a header button that expands
+ * the input field below it.  State is persisted in localStorage so the user
+ * doesn't have to re-open their providers on every page load.
+ */
+function initApiKeyRows() {
+  let open;
+  try {
+    open = new Set(JSON.parse(localStorage.getItem(KEY_API_KEYS) ?? '[]'));
+  } catch {
+    open = new Set();
+  }
+
+  document.querySelectorAll('.provider-row').forEach(row => {
+    const provider = row.dataset.provider;
+    const header   = row.querySelector('.provider-row-header');
+    const body     = row.querySelector('.provider-row-body');
+    if (!header || !body) return;
+
+    // Restore
+    const isOpen = open.has(provider);
+    applyProviderRow(header, body, isOpen);
+
+    header.addEventListener('click', () => {
+      const nowOpen = body.hidden;          // if currently hidden → open it
+      applyProviderRow(header, body, nowOpen);
+      if (nowOpen) { open.add(provider); } else { open.delete(provider); }
+      localStorage.setItem(KEY_API_KEYS, JSON.stringify([...open]));
+    });
+  });
+}
+
+function applyProviderRow(header, body, open) {
+  header.setAttribute('aria-expanded', String(open));
+  header.classList.toggle('active', open);
+  body.hidden = !open;
 }
 
 // ─── OLLAMA START + REFRESH ──────────────────────────────────────────────────
@@ -218,7 +206,6 @@ async function refreshModels() {
     setOllamaStatus('stopped', 'Click ↺ to start · or auto-starts on Run');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
-    reapplyModelFilter();
     return;
   }
 
@@ -232,13 +219,11 @@ async function refreshModels() {
     );
     allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
-    reapplyModelFilter();
   } catch (err) {
     setOllamaStatus('error', err.message);
     setModelListState('error', 'Could not load model list');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
-    reapplyModelFilter();
   }
 }
 

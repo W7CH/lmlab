@@ -100,28 +100,57 @@
 
       <!-- ── API KEYS ────────────────────────────────────────────────── -->
       <div>
-        <div class="section-label">API Keys</div>
+        <!--
+          Collapsible section. The section-label acts as the trigger.
+          Clicking it toggles the .expanded class on #apiKeysBody.
+        -->
+        <button class="section-label section-label-toggle" id="apiKeysToggle"
+                aria-expanded="false" aria-controls="apiKeysBody">
+          API Keys
+          <span class="toggle-chevron" aria-hidden="true">›</span>
+        </button>
 
-        <!-- Provider chip selector — multi-select, each chip reveals its key panel -->
-        <div class="provider-chips" id="providerChips">
-          <button class="provider-chip" data-provider="gemini"    aria-pressed="false">Gemini</button>
-          <button class="provider-chip" data-provider="anthropic" aria-pressed="false">Anthropic</button>
-          <button class="provider-chip" data-provider="openai"    aria-pressed="false">OpenAI</button>
-        </div>
+        <div class="collapsible-body" id="apiKeysBody" aria-hidden="true">
+          <!--
+            One row per provider. Each row has a toggle checkbox + label on the left
+            and the key input on the right — the input is hidden until the row is active.
+          -->
+          <div class="provider-row" id="providerRow-gemini" data-provider="gemini">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Gemini</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="geminiKeyInput"
+                     placeholder="AIzaSy…" autocomplete="off" />
+            </div>
+          </div>
 
-        <!-- Key panels — one per provider, hidden until its chip is active -->
-        <div class="key-panel" id="keyPanel-gemini" data-provider="gemini" hidden>
-          <label for="geminiKeyInput">Google API key</label>
-          <input type="password" id="geminiKeyInput" placeholder="AIzaSy…" autocomplete="off" />
+          <div class="provider-row" id="providerRow-anthropic" data-provider="anthropic">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Anthropic</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="anthropicKeyInput"
+                     placeholder="sk-ant-…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-openai" data-provider="openai">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">OpenAI</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="openaiKeyInput"
+                     placeholder="sk-…" autocomplete="off" />
+            </div>
+          </div>
         </div>
-        </div>
-        <div class="key-panel" id="keyPanel-anthropic" data-provider="anthropic" hidden>
-          <label for="anthropicKeyInput">Anthropic API key</label>
-          <input type="password" id="anthropicKeyInput" placeholder="sk-ant-…" autocomplete="off" />
-        </div>
-        <div class="key-panel" id="keyPanel-openai" data-provider="openai" hidden>
-          <label for="openaiKeyInput">OpenAI API key</label>
-          <input type="password" id="openaiKeyInput" placeholder="sk-…" autocomplete="off" />
       </div>
 
       <!-- Ollama status indicator -->
@@ -154,19 +183,23 @@
 
       <!-- ── MODELS ──────────────────────────────────────────────────── -->
       <div>
-        <div class="section-label">Models</div>
+        <!--
+          Collapsible section header.
+        -->
+        <button class="section-label section-label-toggle" id="modelsToggle"
+                aria-expanded="true" aria-controls="modelsBody">
+          Models
+          <span class="toggle-chevron" aria-hidden="true">›</span>
+        </button>
 
-        <!-- Backend filter bar — single-select, "all" shows everything -->
-        <div class="model-filter-bar" id="modelFilterBar">
-          <button class="model-filter-btn active" data-backend="all">All</button>
-          <button class="model-filter-btn" data-backend="ollama">ollama</button>
-          <button class="model-filter-btn" data-backend="gemini">gemini</button>
-          <button class="model-filter-btn" data-backend="anthropic">anthropic</button>
-          <button class="model-filter-btn" data-backend="openai">openai</button>
+        <!--
+          Model list — injected by ui.js → renderModelList().
+          renderModelList groups models by backend and renders each group
+          as a collapsible sub-section inside this container.
+        -->
+        <div class="collapsible-body collapsible-body--open" id="modelsBody" aria-hidden="false">
+          <div class="model-list" id="modelList"></div>
         </div>
-
-        <!-- Model toggles — injected by ui.js → renderModelList() -->
-        <div class="model-list" id="modelList"></div>
       </div>
 
       <!-- Run button -->
@@ -185,7 +218,7 @@
         <span id="statusText">Select models and click "Run Evaluation" to start.</span>
       </div>
 
-      <!-- Summary metrics + tab bar (hidden until first run) -->
+      <!-- Summary + tabs (hidden until first run) -->
       <div id="summarySection" class="hidden">
         <div class="section-header">
           <h2>Run Summary</h2>
