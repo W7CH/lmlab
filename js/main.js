@@ -16,10 +16,11 @@ import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, 
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
 import { runEval } from './eval.js';
+import { initTheme, toggleTheme } from './theme.js';
+import { initTabs } from './tabs.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
-const KEY_THEME    = 'llm-eval-theme';
-const KEY_API_KEYS  = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
+const KEY_API_KEYS = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
 
 // ─── LIVE STATE ───────────────────────────────────────────────────────────────
 
@@ -52,9 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Tab buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-  });
+  initTabs();
 
   // Ollama ↺ button:
   //   • If Ollama is already running  → refresh the model list (fast check)
@@ -247,55 +246,4 @@ function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModel
     ...anthropicModels.map(m => ({ ...m, active: m.active    ?? false })),
   ];
   return merged.map((m, i) => ({ ...m, color: CHART_COLORS[i % CHART_COLORS.length] }));
-}
-
-// ─── THEME ────────────────────────────────────────────────────────────────────
-
-const HLJS_DARK  = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
-const HLJS_LIGHT = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
-
-function initTheme() {
-  const saved  = localStorage.getItem(KEY_THEME);
-  const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved ?? (osDark ? 'dark' : 'light'));
-}
-
-/** Flip between dark and light and persist the choice. */
-function toggleTheme() {
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-}
-
-/**
- * Apply a theme:
- *   1. Set data-theme on <html> — CSS variables update immediately
- *   2. Swap the highlight.js stylesheet href
- *   3. Re-highlight any code blocks already rendered
- *   4. Persist choice to localStorage
- */
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  const link = document.getElementById('hljs-theme');
-  if (link) link.href = theme === 'dark' ? HLJS_DARK : HLJS_LIGHT;
-
-  // Re-highlight any code blocks already in the DOM
-  if (typeof hljs !== 'undefined') {
-    document.querySelectorAll('pre code[class*="language-"]').forEach(block => {
-      delete block.dataset.highlighted;
-      hljs.highlightElement(block);
-    });
-  }
-  localStorage.setItem(KEY_THEME, theme);
-}
-
-// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
-
-const TAB_IDS = ['results', 'compare', 'chart', 'throughput', 'tokens'];
-
-function switchTab(name) {
-  TAB_IDS.forEach(t => {
-    document.getElementById(`tab${t[0].toUpperCase()}${t.slice(1)}`)
-      ?.classList.toggle('hidden', t !== name);
-  });
-  document.querySelectorAll('.tab-btn')
-    .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
 }
