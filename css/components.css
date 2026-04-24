@@ -780,47 +780,47 @@
 
 .provider-row:last-child { margin-bottom: 0; }
 
+.provider-row:hover,
 .provider-row:has(.provider-row-header.active) {
   border-color: var(--border2);
 }
 
 .provider-row-header {
-  display:         flex;
-  align-items:     center;
-  gap:             8px;
-  width:           100%;
-  padding:         8px 10px;
-  background:      var(--bg3);
-  border:          none;
-  cursor:          pointer;
-  user-select:     none;
-  transition:      background 0.15s;
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  width:       100%;
+  padding:     8px 10px;
+  background:  var(--bg4);
+  border:      none;
+  cursor:      pointer;
+  user-select: none;
+  font-family: var(--font-ui);
+  transition:  background 0.15s;
 }
-
-.provider-row-header:hover { background: var(--bg4); }
-
-.provider-row-header.active { background: var(--bg4); }
 
 .provider-row-dot {
-  width:         7px;
-  height:        7px;
+  width:         8px;
+  height:        8px;
   border-radius: 50%;
-  background:    var(--border2);
+  border:        1.5px solid var(--border2);
+  background:    transparent;
   flex-shrink:   0;
-  transition:    background 0.15s;
+  transition:    background 0.15s, border-color 0.15s;
 }
 
-/* Dot gets a color when the row is active (input visible) */
-[data-provider="gemini"]    .provider-row-header.active .provider-row-dot { background: var(--success); }
-[data-provider="openai"]    .provider-row-header.active .provider-row-dot { background: #10a37f; }
-[data-provider="anthropic"] .provider-row-header.active .provider-row-dot { background: #cd6f32; }
+/* Dot fills with the provider colour when the row is open */
+[data-provider="gemini"]    .provider-row-header.active .provider-row-dot { background: var(--success); border-color: var(--success); }
+[data-provider="openai"]    .provider-row-header.active .provider-row-dot { background: #10a37f;        border-color: #10a37f;        }
+[data-provider="anthropic"] .provider-row-header.active .provider-row-dot { background: #cd6f32;        border-color: #cd6f32;        }
 
 .provider-row-name {
-  flex:        1;
-  font-size:   12px;
-  font-weight: 500;
-  color:       var(--text);
-  text-align:  left;
+  flex:           1;
+  font-size:      11px;
+  font-weight:    700;
+  color:          var(--text);
+  text-align:     left;
+  letter-spacing: 0.2px;
 }
 
 .provider-row-chevron {
