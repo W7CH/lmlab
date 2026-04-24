@@ -32,6 +32,9 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ★ **Expanded analytics:** Each run now reports throughput (tok/s), prompt and completion token counts after inference completes. Results are shown across 3 chart tabs (Latency, Throughput, Tokens) and a comparison table. The summary bar gains a best-throughput metric and average total tokens.
 
+
+★ **Shareable run links:** After a run completes, a **Share** button appears next to the Run Summary heading. Clicking it compresses and encodes the full run snapshot into a URL supported by GitHub Pages and copies it to your clipboard. Opening the URL renders a self-contained `viewer.html` page — same charts, cards, and syntax highlighting as the main dashboard, but read-only and dependency-free.
+
 ---
 
 ## Project Structure
@@ -40,6 +43,7 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 lmlab/
 ├── server.js           # Dev server + Ollama lifecycle manager + API proxies (run this)
 ├── index.html          # Page shell — HTML only, no inline styles or scripts
+├── viewer.html         # Self-contained read-only share target, decodes run from URL fragment
 ├── css/
 │   ├── variables.css   # Design tokens — :root (invariant), [data-theme="dark"], [data-theme="light"]
 │   ├── layout.css      # Reset, header, sidebar, content area
@@ -48,6 +52,7 @@ lmlab/
 │   ├── config.js       # GEMINI_MODELS, ANTHROPIC_MODELS, OPENAI_MODELS, CHART_COLORS, presets, defaults
 │   ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
 │   ├── api.js          # fetch() wrappers for Ollama, Gemini, Anthropic, and OpenAI
+│   ├── share.js        # Run serialization, compression, URL generation, clipboard copy
 │   ├── ui.js           # DOM builders (cards, model list, skeletons, status bar, Ollama pill)
 │   ├── charts.js       # Three chart builders: Latency, Throughput, Tokens + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
@@ -166,10 +171,6 @@ Press `Ctrl+C` to stop. If the server started Ollama, it will be stopped too.
 ---
 
 ## Configuration
-
-### Ollama models — auto-discovered, no config needed
-
-Ollama models are discovered at runtime by querying `/api/tags`. Pull a model and click `↺` in the sidebar to pick it up immediately — no restart or config change required.
 
 ### Adding / removing frontier models (`js/config.js`)
 

@@ -56,8 +56,9 @@ function loadPayload() {
 function renderView(payload) {
   // ── Prompt section ────────────────────────────────────────────────────────
   document.getElementById('viewerPromptText').textContent = payload.prompt ?? '';
-  document.getElementById('viewerParams').textContent =
-    `Temperature: ${payload.temperature} · Max tokens: ${payload.maxTokens}`;
+  document.getElementById('viewerParams').innerHTML =
+    `<span class="viewer-param-badge">Temp: ${payload.temperature}</span>` +
+    `<span class="viewer-param-badge">Max tokens: ${payload.maxTokens}</span>`;
 
   if (payload.ts) {
     document.getElementById('viewerTimestamp').textContent =

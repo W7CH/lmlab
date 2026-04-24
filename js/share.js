@@ -8,7 +8,7 @@
  * Encoding    : compressToEncodedURIComponent — already URL-safe, no extra step needed
  */
 
-const VIEWER_PAGE = 'viewer.html';
+const VIEWER_BASE = 'https://w7ch.github.io/lmlab/viewer.html';
 
 // ─── PAYLOAD ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ function generateShareUrl(payload) {
     throw new Error('LZString library is not loaded — check the CDN script tag in index.html.');
   }
   const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
-  return `${location.origin}/${VIEWER_PAGE}?data=${compressed}`;
+  return `${VIEWER_BASE}?data=${compressed}`;
 }
 
 // ─── BUTTON ───────────────────────────────────────────────────────────────────
@@ -90,29 +90,34 @@ export function showShareButton(promptText, temperature, maxTokens, resultsMap) 
     try {
       url = generateShareUrl(buildSharePayload(promptText, temperature, maxTokens, resultsMap));
     } catch {
-      flash(btn, '✗ Error', 2000);
+      flash(btn, '✗ Error', 2000, null);
       return;
     }
 
     navigator.clipboard.writeText(url).then(() => {
-      flash(btn, '✓ Copied!', 2500);
+      flash(btn, '✓ Copied!', 2500, 'share-btn--copied');
     }).catch(() => {
       // Clipboard API unavailable (e.g. non-HTTPS) — surface URL to the user
       window.prompt('Copy this shareable link:', url);
     });
   });
 
-  header.appendChild(btn);
+  // Insert immediately after <h2> so the button sits next to "Run Summary"
+  const h2 = header.querySelector('h2');
+  if (h2) h2.insertAdjacentElement('afterend', btn);
+  else     header.appendChild(btn);
 }
 
 // ─── INTERNAL ─────────────────────────────────────────────────────────────────
 
-function flash(btn, message, duration) {
+function flash(btn, message, duration, cssClass) {
   const original = btn.innerHTML;
   btn.textContent = message;
   btn.disabled    = true;
+  if (cssClass) btn.classList.add(cssClass);
   setTimeout(() => {
     btn.innerHTML = original;
     btn.disabled  = false;
+    if (cssClass) btn.classList.remove(cssClass);
   }, duration);
 }
