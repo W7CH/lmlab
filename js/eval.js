@@ -137,6 +137,9 @@ export async function runEval(models, selectedIds) {
         geminiKey, openaiKey, anthropicKey, deepseekKey, mistralKey, groqKey,
       }, signal);
       const elapsed = Date.now() - start;
+      if (!res.text.trim()) {
+        throw new Error('Empty response — the model returned no content');
+      }
       resultsMap[m.id] = {
         status:       'ok',
         text:         res.text,

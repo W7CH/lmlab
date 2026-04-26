@@ -44,6 +44,7 @@ Total benchmark time ≈ slowest model (all models run in parallel)
 | **Ollama auto-management** | Server checks Ollama health, spawns `ollama serve` if needed, and cleans up on exit |
 | **Dynamic model discovery** | Ollama models are discovered at runtime via `/api/tags` — no static config, no restarts |
 | **Run cancellation** | Cancel any in-flight benchmark mid-run; completed results are preserved and charted, cancelled models shown distinctly |
+| **Empty response detection** | Models that return blank content are automatically reclassified as errors, keeping analytics unaffected |
 
 ### Metrics & Analytics
 | Metric | Description |
@@ -304,6 +305,9 @@ The `o`-series models don't accept a `temperature` parameter. LMLab handles this
 
 **Anthropic calls fail with a CORS error**  
 Ensure you are accessing the dashboard via `http://localhost:8080` and not directly as a `file://` URL. The Anthropic proxy only works through `server.js`.
+
+**Model shows an error card with "Empty response"**  
+Some models, most commonly local `deepseek-r1` variants, occasionally return a blank completion body. This happens when the model stops generating without producing any tokens (e.g. context window exceeded, quantization artifact, or a mismatch between the prompt format and the model's template). LMLab automatically reclassifies empty responses as errors so they do not skew analytics. Try reducing **Max tokens**, lowering the prompt complexity, or pulling a different quantization of the model.
 
 **Theme flashes wrong color on load**  
 `initTheme()` runs before the first render and should prevent this. If you see a flash, check that your browser isn't blocking `localStorage` or overriding inline scripts. Clearing `localStorage` resets the theme preference to the OS default.
