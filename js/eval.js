@@ -24,6 +24,7 @@ import {
 } from './ui.js';
 import { buildAllCharts, buildCompareTable } from './charts.js';
 import { showShareButton } from './share.js';
+import { saveRun }   from './runs.js';
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,11 @@ export async function runEval(models, selectedIds) {
   // ── 2. Disable UI ─────────────────────────────────────────────────────────
   const runBtn = document.getElementById('runBtn');
   runBtn.disabled = true;
+  _pendingSnapshot = null;
   hideSummary();
   hideEmptyState();
   document.getElementById('resultsGrid').innerHTML = '';
+  document.getElementById('saveRunBtn')?.classList.add('hidden');
 
   // ── 3. Ollama pre-flight ──────────────────────────────────────────────────
   if (needsOllama) {
@@ -123,8 +126,22 @@ export async function runEval(models, selectedIds) {
   timerBadge.textContent = `${((Date.now() - runStart) / 1000).toFixed(2)}s total`;
   runBtn.disabled = false;
 
-  finalise(resultsMap);
+  finalise(resultsMap, { prompt, temperature, maxTokens });
   showShareButton(prompt, temperature, maxTokens, resultsMap);
+}
+
+// ─── MODULE STATE ─────────────────────────────────────────────────────────────
+
+// Holds the most recent completed run snapshot for the Save Run button
+let _pendingSnapshot = null;
+
+/**
+ * Called by main.js when the user clicks "Save Run".
+ * Returns the saved RunRecord or null if nothing to save.
+ */
+export function savePendingRun() {
+  if (!_pendingSnapshot) return null;
+  return saveRun(_pendingSnapshot);
 }
 
 // ─── PRIVATE ──────────────────────────────────────────────────────────────────
@@ -145,7 +162,7 @@ function dispatch(model, prompt, temperature, maxTokens, keys) {
   }
 }
 
-function finalise(resultsMap) {
+function finalise(resultsMap, { prompt, temperature, maxTokens }) {
   const all        = Object.values(resultsMap);
   const successful = all.filter(r => r.status === 'ok');
   const failed     = all.filter(r => r.status === 'error');
@@ -176,4 +193,13 @@ function finalise(resultsMap) {
 
   buildAllCharts(all);
   buildCompareTable(all, document.getElementById('compareBody'));
+
+  const snapshot = { prompt, params: { temperature, maxTokens }, results: all };
+
+  // Save to localStorage (for Saved Runs panel) — store but don't auto-name
+  // The user clicks "Save Run" to persist; we store the snapshot for that click
+  _pendingSnapshot = snapshot;
+
+  // Show action buttons
+  document.getElementById('saveRunBtn')?.classList.remove('hidden');
 }

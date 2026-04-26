@@ -15,9 +15,10 @@
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
-import { runEval } from './eval.js';
+import { runEval, savePendingRun }    from './eval.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
+import { openRunsPanel, closeRunsPanel } from './runsPanel.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
 const KEY_API_KEYS = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
@@ -48,9 +49,33 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('maxTokensInput').value = DEFAULTS.maxTokens;
 
   // Run button
-  document.getElementById('runBtn').addEventListener('click', () => {
-    runEval(allModels, selectedModels);
+  document.getElementById('runBtn')
+    .addEventListener('click', () => runEval(allModels, selectedModels));
+
+  // Save Run button
+  document.getElementById('saveRunBtn')?.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const record = savePendingRun();
+    if (!record) return;
+    btn.textContent = '✓ Saved!';
+    btn.classList.add('save-run-btn--saved');
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '⊕ Save Run';
+      btn.classList.remove('save-run-btn--saved');
+      btn.disabled = false;
+      btn.classList.add('hidden'); // hide after save — already in saved runs
+    }, 2000);
   });
+
+  // Saved Runs panel button (header)
+  document.getElementById('savedRunsBtn')?.addEventListener('click', () => {
+    openRunsPanel(allModels, selectedModels);
+  });
+
+  // Runs panel close button + backdrop
+  document.getElementById('runsPanelClose')?.addEventListener('click', closeRunsPanel);
+  document.getElementById('runsBackdrop')?.addEventListener('click', closeRunsPanel);
 
   // Tab buttons
   initTabs();

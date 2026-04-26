@@ -37,6 +37,8 @@ Supports **Ollama** (local models) and **frontier models** (Gemini, Anthropic, O
 
 ★ **3 new cloud backends — DeepSeek, Mistral, Groq:** All three use the OpenAI-compatible schema and require no new proxy routes. Groq's hosted inference is notably fast (expect sub-second latency on smaller models). The color palette is expanded from 12 to 28 colors organized into 7 hue families — one per backend — so model dots, card accents, and chart bars are always backend-consistent at a glance.
 
+★ **Saved runs history:** After a run completes, a **Save Run** button appears next to Share button. Saved runs persist in `localStorage` across sessions; if storage fills up the oldest run is evicted automatically. A **Saved Runs** section in the header opens a slide-in drawer listing up to 50 past runs, newest first — each with its prompt, timestamp, model count, and backend badges. From the drawer, you can load a run back into the UI (pixel-identical to the live view), re-run it, rename it, export it as JSON, or delete it.
+
 ---
 
 ## Project Structure
@@ -55,8 +57,12 @@ lmlab/
 │   ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
 │   ├── api.js          # fetch() wrappers for Ollama, Gemini, Anthropic, OpenAI, DeepSeek, Mistral, Groq
 │   ├── share.js        # Run serialization, compression, URL generation, clipboard copy
+│   ├── runs.js         # Pure localStorage CRUD, no DOM, no imports
+│   ├── loadRun.js      # Restores UI from stored data, handles rerun + Ollama guard
+│   ├── runsPanel.js    # Drawer render + user actions, calls runs.js + loadRun.js
 │   ├── theme.js        # initTheme, toggleTheme, applyTheme — shared by index + viewer
 │   ├── tabs.js         # Tab switching via data-tab attributes — shared by index + viewer
+│   ├── utils.js         # Shared module for runsPanel.js and loadRun.js
 │   ├── ui.js           # DOM builders (cards, model list, skeletons, status bar, Ollama pill)
 │   ├── charts.js       # Three chart builders: Latency, Throughput, Tokens + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
@@ -260,8 +266,8 @@ Run `ollama list` to confirm models are pulled. Click `↺` to re-run discovery.
 - **Gemini / OpenAI / Anthropic / DeepSeek / Mistral / Groq returns 401:**
 Your API key is missing or invalid. Check the corresponding key field in the sidebar.
 
-- **OpenAI `o1` model returns an error about `temperature`:**
-The `o1` model family does not accept a `temperature` parameter. This is handled automatically — `temperature` is omitted when the model ID starts with `o1`.
+- **OpenAI `o` model returns an error about `temperature`:**
+The `o` model family does not accept a `temperature` parameter. This is handled automatically — `temperature` is omitted when the model ID starts with `o`.
 
 - **Anthropic calls fail / CORS error:**
 Make sure you are running `server.js` and accessing the dashboard via `http://localhost:8080`. Direct file access (`file://`) bypasses the proxy.

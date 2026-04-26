@@ -26,12 +26,12 @@
   <!-- LZ-string: URL-safe compression for the Share feature -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 
-  <!-- Styles (load order matters: variables → layout → components) -->
+  <!-- Styles (load order: variables → layout → components) -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
 
-  <!-- App entry point (ES module; imports config, api, ui, eval, charts) -->
+  <!-- App entry point -->
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -57,6 +57,9 @@
     </div>
     <div class="header-right">
       <div class="header-badge" id="runTimer">ready</div>
+      <button class="saved-runs-btn" id="savedRunsBtn" title="Saved Runs">
+        ☰ Saved Runs
+      </button>
       <button class="theme-btn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme">
         <!-- Moon: visible in dark mode → click to go light -->
         <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -260,7 +263,12 @@
       <!-- Summary + tabs (hidden until first run) -->
       <div id="summarySection" class="hidden">
         <div class="section-header">
-          <h2>Run Summary</h2>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2>Run Summary</h2>
+            <button class="save-run-btn hidden" id="saveRunBtn" title="Save this run locally">
+              ⊕ Save Run
+            </button>
+          </div>
           <div class="tabs">
             <button class="tab-btn active" data-tab="results">Results</button>
             <button class="tab-btn"        data-tab="compare">Compare</button>
@@ -352,6 +360,29 @@
 
     </main><!-- /content -->
   </div><!-- /main -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SAVED RUNS DRAWER
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="runs-backdrop" id="runsBackdrop" aria-hidden="true"></div>
+
+  <aside class="runs-panel" id="runsPanel" aria-label="Saved Runs" role="dialog">
+    <div class="runs-panel-header">
+      <div class="runs-panel-title">
+        <span class="runs-panel-icon">◈</span>
+        Saved Runs
+      </div>
+      <div class="runs-panel-header-right">
+        <span class="runs-panel-count" id="runsPanelCount"></span>
+        <button class="runs-panel-close" id="runsPanelClose" aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div class="runs-panel-body">
+      <div class="runs-list" id="runsList">
+        <!-- Populated by runsPanel.js -->
+      </div>
+    </div>
+  </aside>
 
 </body>
 </html>
