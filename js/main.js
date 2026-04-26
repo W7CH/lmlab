@@ -12,7 +12,7 @@
  *   8. Assign chart colors and render the model toggle list
  */
 
-import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
+import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
 import { runEval } from './eval.js';
@@ -203,7 +203,8 @@ async function refreshModels() {
 
   if (!health.running) {
     setOllamaStatus('stopped', 'Click ↺ to start · or auto-starts on Run');
-    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
     return;
   }
@@ -216,23 +217,35 @@ async function refreshModels() {
         ? `${ollamaModels.length} model(s) available`
         : 'No models pulled yet',
     );
-    allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
   } catch (err) {
     setOllamaStatus('error', err.message);
     setModelListState('error', 'Could not load model list');
-    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
   }
 }
 
 // ─── MODEL LIST BUILDER ───────────────────────────────────────────────────────
 
-/**
- * Merge all model sources and assign chart colors by position.
- * Order: Ollama (alphabetical) → Gemini → OpenAI → Anthropic
- */
-function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModels) {
+function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModels, deepseekModels, mistralModels, groqModels) {
+  // Colors are assigned per-backend in blocks so models from the same provider
+  // share a hue family in charts. Each block of 4 colors in CHART_COLORS maps
+  // to one backend: ollama=0-3, gemini=4-7, openai=8-11, anthropic=12-15,
+  // deepseek=16-19, mistral=20-23, groq=24-27.
+  const colorOffset = { ollama: 0, gemini: 4, openai: 8, anthropic: 12, deepseek: 16, mistral: 20, groq: 24 };
+  const groupCount  = { ollama: 0, gemini: 0, openai: 0, anthropic: 0, deepseek: 0, mistral: 0, groq: 0 };
+
+  function assignColor(backend) {
+    const base  = colorOffset[backend] ?? 0;
+    const count = groupCount[backend]  ?? 0;
+    groupCount[backend] = count + 1;
+    return CHART_COLORS[(base + count) % CHART_COLORS.length];
+  }
+
   const merged = [
     ...ollamaModels.map(m => ({
       id:      m.id,
@@ -241,9 +254,13 @@ function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModel
       active:  false,
       meta:    { family: m.family, parameterSize: m.parameterSize, sizeGb: m.sizeGb },
     })),
-    ...geminiModels.map(m    => ({ ...m, active: m.active    ?? false })),
-    ...openaiModels.map(m    => ({ ...m, active: m.active    ?? false })),
-    ...anthropicModels.map(m => ({ ...m, active: m.active    ?? false })),
+    ...(geminiModels    ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(openaiModels    ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(anthropicModels ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(deepseekModels  ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(mistralModels   ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(groqModels      ?? []).map(m => ({ ...m, active: m.active ?? false })),
   ];
-  return merged.map((m, i) => ({ ...m, color: CHART_COLORS[i % CHART_COLORS.length] }));
+
+  return merged.map(m => ({ ...m, color: assignColor(m.backend) }));
 }

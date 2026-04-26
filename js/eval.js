@@ -8,11 +8,9 @@
  *   3. Update each result card as responses arrive
  *   4. Compute summary statistics once everything settles
  *   5. Collects: latency, completion tokens, prompt tokens, response length
- *
- * Backends: ollama · gemini · openai · anthropic
  */
 
-import { callOllama, callGemini, callOpenAI, callAnthropic } from './api.js';
+import { callOllama, callGemini, callOpenAI, callAnthropic, callDeepSeek, callMistral, callGroq } from './api.js';
 import { ensureOllamaRunning } from './ollama.js';
 import {
   setStatus,
@@ -47,6 +45,9 @@ export async function runEval(models, selectedIds) {
   const geminiKey    = document.getElementById('geminiKeyInput').value.trim();
   const openaiKey    = document.getElementById('openaiKeyInput').value.trim();
   const anthropicKey = document.getElementById('anthropicKeyInput').value.trim();
+  const deepseekKey  = document.getElementById('deepseekKeyInput').value.trim();
+  const mistralKey   = document.getElementById('mistralKeyInput').value.trim();
+  const groqKey      = document.getElementById('groqKeyInput').value.trim();
 
   const modelsToRun = models.filter(m => selectedIds.has(m.id));
   const needsOllama = modelsToRun.some(m => m.backend === 'ollama');
@@ -95,7 +96,7 @@ export async function runEval(models, selectedIds) {
     const start = Date.now();
     try {
       const res = await dispatch(m, prompt, temperature, maxTokens, {
-        geminiKey, openaiKey, anthropicKey,
+        geminiKey, openaiKey, anthropicKey, deepseekKey, mistralKey, groqKey,
       });
       const elapsed = Date.now() - start;
       resultsMap[m.id] = {
@@ -137,6 +138,9 @@ function dispatch(model, prompt, temperature, maxTokens, keys) {
     case 'gemini':    return callGemini(model.id, prompt, temperature, maxTokens, keys.geminiKey);
     case 'openai':    return callOpenAI(model.id, prompt, temperature, maxTokens, keys.openaiKey);
     case 'anthropic': return callAnthropic(model.id, prompt, temperature, maxTokens, keys.anthropicKey);
+    case 'deepseek':  return callDeepSeek(model.id, prompt, temperature, maxTokens, keys.deepseekKey);
+    case 'mistral':   return callMistral(model.id, prompt, temperature, maxTokens, keys.mistralKey);
+    case 'groq':      return callGroq(model.id, prompt, temperature, maxTokens, keys.groqKey);
     default:          return Promise.reject(new Error(`Unknown backend: ${model.backend}`));
   }
 }

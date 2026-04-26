@@ -52,7 +52,7 @@
       </div>
       <div>
         <h1>LMLab</h1>
-        <span>Ollama · Gemini · Anthropic · OpenAI</span>
+        <span>Ollama · Frontier Models</span>
       </div>
     </div>
     <div class="header-right">
@@ -93,7 +93,7 @@
           <label for="promptInput">Task prompt</label>
           <textarea
             id="promptInput"
-            placeholder="Write a Python function that…"
+            placeholder="Write a function that…"
           >Write a Python function that checks if a string is a palindrome, handles edge cases (empty string, spaces, punctuation), and includes docstring + type hints + 3 unit tests using unittest.</textarea>
           <div class="prompt-presets" id="presetContainer">
             <!-- Injected by ui.js → renderPresets() -->
@@ -151,6 +151,42 @@
             <div class="provider-row-body" hidden>
               <input type="password" id="openaiKeyInput"
                      placeholder="sk-…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-deepseek" data-provider="deepseek">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">DeepSeek</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="deepseekKeyInput"
+                     placeholder="sk-…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-mistral" data-provider="mistral">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Mistral</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="mistralKeyInput"
+                     placeholder="…" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="provider-row" id="providerRow-groq" data-provider="groq">
+            <button class="provider-row-header" aria-expanded="false">
+              <span class="provider-row-dot"></span>
+              <span class="provider-row-name">Groq</span>
+              <span class="provider-row-chevron" aria-hidden="true">›</span>
+            </button>
+            <div class="provider-row-body" hidden>
+              <input type="password" id="groqKeyInput"
+                     placeholder="gsk_…" autocomplete="off" />
             </div>
           </div>
         </div>

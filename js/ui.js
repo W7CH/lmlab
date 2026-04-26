@@ -29,8 +29,9 @@ export function setStatus(type, message) {
 
 // ─── MODEL LIST ───────────────────────────────────────────────────────────────
 
-const BACKEND_ORDER  = ['ollama', 'gemini', 'openai', 'anthropic'];
-const BACKEND_LABELS = { ollama: 'Ollama', gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Anthropic' };
+const BACKEND_ORDER  = ['ollama', 'gemini', 'openai', 'anthropic', 'deepseek', 'mistral', 'groq'];
+const BACKEND_LABELS = { ollama: 'Ollama', gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Anthropic',
+                         deepseek: 'DeepSeek', mistral: 'Mistral', groq: 'Groq' };
 
 // localStorage key for tracking which backend groups are collapsed
 const KEY_MODEL_GROUPS = 'llm-eval-model-groups-collapsed';
@@ -361,7 +362,6 @@ export function setOllamaStatus(state, detail = '') {
   const sub   = document.getElementById('ollamaStatusSub');
   if (!pill) return;
 
-  // Remove all state classes, add the new one
   pill.className = `ollama-status-pill ollama-status-${state}`;
 
   const labels = {

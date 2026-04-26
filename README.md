@@ -2,7 +2,7 @@
 
 A browser dashboard for evaluating and comparing LLM models side-by-side using the **`chat.completions`** API.
 
-Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **OpenAI** — all routed through a unified evaluation pipeline.
+Supports **Ollama** (local models) and **frontier models** (Gemini, Anthropic, OpenAI, DeepSeek, Mistral, Groq) — all routed through a unified evaluation pipeline.
 
 ![Header](https://capsule-render.vercel.app/api?type=blur&height=300&color=gradient&text=LMLab&fontColor=Black&animation=twinkling)
 
@@ -35,6 +35,8 @@ Supports **Ollama** (local models), **Google Gemini**, **Anthropic**, and **Open
 
 ★ **Shareable run links:** After a run completes, a **Share** button appears next to the Run Summary heading. Clicking it compresses and encodes the full run snapshot into a URL supported by GitHub Pages and copies it to your clipboard. Opening the URL renders a self-contained `viewer.html` page — same charts, cards, and syntax highlighting as the main dashboard, but read-only and dependency-free.
 
+★ **3 new cloud backends — DeepSeek, Mistral, Groq:** All three use the OpenAI-compatible schema and require no new proxy routes. Groq's hosted inference is notably fast (expect sub-second latency on smaller models). The color palette is expanded from 12 to 28 colors organized into 7 hue families — one per backend — so model dots, card accents, and chart bars are always backend-consistent at a glance.
+
 ---
 
 ## Project Structure
@@ -49,14 +51,16 @@ lmlab/
 │   ├── layout.css      # Reset, header, sidebar, content area
 │   └── components.css  # Every reusable UI component
 ├── js/
-│   ├── config.js       # GEMINI_MODELS, ANTHROPIC_MODELS, OPENAI_MODELS, CHART_COLORS, presets, defaults
+│   ├── config.js       # GEMINI_MODELS, ANTHROPIC_MODELS, OPENAI_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, presets, defaults
 │   ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
-│   ├── api.js          # fetch() wrappers for Ollama, Gemini, Anthropic, and OpenAI
+│   ├── api.js          # fetch() wrappers for Ollama, Gemini, Anthropic, OpenAI, DeepSeek, Mistral, Groq
 │   ├── share.js        # Run serialization, compression, URL generation, clipboard copy
+│   ├── theme.js        # initTheme, toggleTheme, applyTheme — shared by index + viewer
+│   ├── tabs.js         # Tab switching via data-tab attributes — shared by index + viewer
 │   ├── ui.js           # DOM builders (cards, model list, skeletons, status bar, Ollama pill)
 │   ├── charts.js       # Three chart builders: Latency, Throughput, Tokens + comparison table
 │   ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
-│   └── main.js         # Entry point — wires everything, handles tabs, theme init/toggle
+│   └── main.js         # Entry point — wires everything
 └── README.md
 ```
 
@@ -114,8 +118,11 @@ POST /api/anthropic/ ────► proxyToAnthropic()
 | **Node.js 18+** | Uses native `fetch` and `fs/promises` |
 | **Ollama** | [ollama.com](https://ollama.com/download) |
 | **Google AI Studio API key** | Required only for Gemini models — [get one here](https://aistudio.google.com/app/apikey) |
-| **OpenAI API key** | Required only for GPT / o1 models — [get one here](https://platform.openai.com/api-keys) |
+| **OpenAI API key** | Required only for GPT / o1 / o3 models — [get one here](https://platform.openai.com/api-keys) |
 | **Anthropic API key** | Required only for Claude models — [get one here](https://console.anthropic.com/) |
+| **DeepSeek API key** | Required only for DeepSeek models — [get one here](https://platform.deepseek.com/) |
+| **Mistral API key** | Required only for Mistral models — [get one here](https://console.mistral.ai/) |
+| **Groq API key** | Required only for Groq-hosted models — [get one here](https://console.groq.com/) |
 
 Verify Node.js version:
 
@@ -174,35 +181,42 @@ Press `Ctrl+C` to stop. If the server started Ollama, it will be stopped too.
 
 ### Adding / removing frontier models (`js/config.js`)
 
-Cloud models (Gemini, OpenAI, Anthropic) are still declared statically since they don't have a local discovery endpoint:
+Cloud models are declared statically in `js/config.js`. Each backend has its own named array:
 
 ```js
-// Add a Gemini model
-{
-  id:      'gemini-1.5-pro', // exact name
-  label:   'Gemini 1.5 Pro',
-  backend: 'gemini',
-  active:  false, // pre-selected by default?
-},
+export const GEMINI_MODELS    = [ /* Gemini 1.5 Pro, Flash, … */ ];
+export const OPENAI_MODELS    = [ /* gpt-4o, gpt-4o-mini, … */ ];
+export const ANTHROPIC_MODELS = [ /* Claude Haiku 4.5, Sonnet 4.6, Opus 4.6 */ ];
+export const DEEPSEEK_MODELS  = [ /* deepseek-chat (V3), deepseek-reasoner (R1) */ ];
+export const MISTRAL_MODELS   = [ /* Small, Medium, Large, … */ ];
+export const GROQ_MODELS      = [ /* Llama 3.3 70B, Llama 3.1 8B Instant, Gemma 2 9B, Mixtral 8×7B, Kimi K2 */ ];
+```
 
-// Add an Anthropic model
-{
-  id:      'claude-opus-4-6',
-  label:   'Claude Opus 4.6',
-  backend: 'anthropic',
-  active:  true,
-},
+To add a model, append an entry to the relevant array:
 
-// Add an OpenAI model
-{
-  id:      'gpt-4o-mini',
-  label:   'GPT-4o Mini',
+```js
+{ id: 'o1-mini', // exact name
+  label: 'o1 Mini',
   backend: 'openai',
-  active:  false,
+  active: false, // pre-selected by default?
 },
 ```
 
-Colors are assigned automatically from `CHART_COLORS` by index across the full merged list (Ollama → Gemini → OpenAI → Anthropic). You no longer need to specify a `color` field per model.
+Colors are assigned automatically from a 28-color palette organized into 7 hue families — one per backend. Models from the same backend always share a hue family, so chart bars, card accents, and model-list dots are instantly backend-scannable without any manual `color` field.
+
+### Sharing results
+
+After a successful run, a **Share** button appears in the Run Summary header. Clicking it:
+
+1. Serializes the full run snapshot (prompt, parameters, all model results).
+2. Compresses and base64url-encodes it into a URL fragment.
+3. Copies `viewer.html#<encoded-data>` to your clipboard.
+
+Anyone with the link can open `viewer.html` to see the full comparison — all charts, result cards with syntax-highlighted code, and summary metrics — without needing the server running or any API keys. The viewer includes its own dark/light theme toggle.
+
+The Share button is hidden at the start of each new run and re-appears only after the run completes successfully, so stale links are never accidentally copied mid-run.
+
+> **Note:** Share URLs encode the entire run payload in the fragment. Very long model outputs across many models can produce URLs exceeding browser limits (~2 MB). For routine comparisons this is not an issue.
 
 ### Theming (`css/variables.css`)
 
@@ -243,7 +257,7 @@ If `ollama serve` cannot be launched, the exact error message is displayed in th
 - **Ollama starts but no models appear:**
 Run `ollama list` to confirm models are pulled. Click `↺` to re-run discovery. Models must be pulled before they can appear in the dashboard.
 
-- **Gemini / OpenAI / Anthropic returns 401:**
+- **Gemini / OpenAI / Anthropic / DeepSeek / Mistral / Groq returns 401:**
 Your API key is missing or invalid. Check the corresponding key field in the sidebar.
 
 - **OpenAI `o1` model returns an error about `temperature`:**
@@ -281,4 +295,4 @@ If you are interested in collaborating or have ideas on how to improve this proj
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
