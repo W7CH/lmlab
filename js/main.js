@@ -15,7 +15,7 @@
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
-import { runEval, savePendingRun }    from './eval.js';
+import { runEval, savePendingRun, cancelRun, isRunning } from './eval.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
 import { openRunsPanel, closeRunsPanel } from './runsPanel.js';
@@ -48,9 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tempInput').value      = DEFAULTS.temperature;
   document.getElementById('maxTokensInput').value = DEFAULTS.maxTokens;
 
-  // Run button
+  // Run / Cancel button — same element, branches on whether a run is active
   document.getElementById('runBtn')
-    .addEventListener('click', () => runEval(allModels, selectedModels));
+    .addEventListener('click', () => {
+      if (isRunning()) cancelRun();
+      else runEval(allModels, selectedModels);
+    });
 
   // Save Run button
   document.getElementById('saveRunBtn')?.addEventListener('click', e => {

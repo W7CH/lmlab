@@ -277,6 +277,11 @@
 .run-btn:active   { transform: translateY(0); }
 .run-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+.run-btn--cancelling {
+  background: var(--danger);
+}
+.run-btn--cancelling:hover { background: #f98080; }
+
 /* ─── STATUS BAR ────────────────────────────────────────────────────────────── */
 .status-bar {
   background:  var(--bg3);
@@ -303,6 +308,8 @@
 .status-dot.running { background: var(--warn);    animation: pulse 1s infinite; }
 .status-dot.done    { background: var(--success); }
 .status-dot.error   { background: var(--danger);  }
+.status-dot.warn    { background: var(--warn);    }
+.status-dot.idle    { background: var(--muted);   }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -364,8 +371,9 @@
 }
 
 .result-card:hover       { border-color: var(--border2); }
-.result-card.winner      { border-color: var(--success); }
-.result-card.error-card  { border-color: var(--danger);  }
+.result-card.winner         { border-color: var(--success); }
+.result-card.error-card     { border-color: var(--danger);  }
+.result-card.cancelled-card { border-color: var(--border2); opacity: 0.65; }
 
 .card-header {
   padding:         12px 14px;
@@ -398,7 +406,8 @@
 .badge-time   { background: rgba(245, 158, 11,  0.12); color: var(--warn);    }
 .badge-tokens { background: rgba(108, 139, 255, 0.12); color: var(--accent);  }
 .badge-winner { background: rgba(52,  211, 153, 0.12); color: var(--success); }
-.badge-error  { background: rgba(248, 113, 113, 0.12); color: var(--danger);  }
+.badge-error      { background: rgba(248, 113, 113, 0.12); color: var(--danger); }
+.badge-cancelled  { background: rgba(122, 128, 153, 0.12); color: var(--muted);  }
 .badge-ollama    { background: rgba(167, 139, 250, 0.10); color: #a78bfa;        }
 .badge-gemini    { background: rgba(45,  212, 191, 0.12); color: #2dd4bf;        }
 .badge-openai    { background: rgba(52,  211, 153, 0.12); color: #34d399;        }
@@ -441,6 +450,13 @@
   font-size:   12px;
   font-family: var(--font-code);
   line-height: 1.6;
+}
+
+.card-cancelled {
+  padding:     14px;
+  color:       var(--muted);
+  font-size:   12px;
+  font-family: var(--font-code);
 }
 
 /* ─── SPINNER ───────────────────────────────────────────────────────────────── */

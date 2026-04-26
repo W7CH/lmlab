@@ -32,11 +32,12 @@ function estimateTokens(text) {
  * Generic OpenAI-compatible POST.
  * Used by: Ollama, Gemini, OpenAI, DeepSeek, Mistral, Groq.
  */
-async function callCompletions(url, body, headers = {}) {
+async function callCompletions(url, body, headers = {}, signal) {
   const response = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body:    JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {
@@ -59,14 +60,14 @@ async function callCompletions(url, body, headers = {}) {
  * Call a local Ollama model via the server.js proxy at /v1/*.
  * No CORS issues — the browser never contacts port 11434 directly.
  */
-export async function callOllama(modelId, prompt, temperature, maxTokens) {
+export async function callOllama(modelId, prompt, temperature, maxTokens, signal) {
   return callCompletions('/v1/chat/completions', {
     model:      modelId,
     messages:   [{ role: 'user', content: prompt }],
     temperature,
     max_tokens: maxTokens,
     stream:     false,
-  });
+  }, {}, signal);
 }
 
 // ─── GEMINI ───────────────────────────────────────────────────────────────────
@@ -75,7 +76,7 @@ export async function callOllama(modelId, prompt, temperature, maxTokens) {
  * Call a Gemini model via Google's OpenAI-compatible endpoint.
  * API key: https://aistudio.google.com/app/apikey
  */
-export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Google API key is required for Gemini. Enter it in the sidebar.');
   return callCompletions(
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
@@ -86,6 +87,7 @@ export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey
       max_tokens: maxTokens,
     },
     { Authorization: `Bearer ${apiKey}` },
+    signal,
   );
 }
 
@@ -99,7 +101,7 @@ export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey
  * Note: o1 models do not support the temperature parameter; it is omitted
  * automatically when modelId starts with "o1".
  */
-export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('OpenAI API key is required for GPT models. Enter it in the sidebar.');
   const isO1 = modelId.startsWith('o1') || modelId.startsWith('o3');
   return callCompletions(
@@ -112,6 +114,7 @@ export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey
       ...(!isO1 && { temperature }),
     },
     { Authorization: `Bearer ${apiKey}` },
+    signal,
   );
 }
 
@@ -128,7 +131,7 @@ export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey
  * Because the browser cannot call api.anthropic.com directly (CORS), this
  * request is routed through server.js's /api/anthropic/messages proxy route.
  */
-export async function callAnthropic(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callAnthropic(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Anthropic API key is required for Claude. Enter it in the sidebar.');
 
   const response = await fetch('/api/anthropic/messages', {
@@ -141,6 +144,7 @@ export async function callAnthropic(modelId, prompt, temperature, maxTokens, api
       temperature,
       messages:    [{ role: 'user', content: prompt }],
     }),
+    signal,
   });
 
   if (!response.ok) {
@@ -160,12 +164,13 @@ export async function callAnthropic(modelId, prompt, temperature, maxTokens, api
 // Fully OpenAI-compatible — only the base URL and key differ.
 // API key: https://platform.deepseek.com/api_keys
 
-export async function callDeepSeek(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callDeepSeek(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('DeepSeek API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.deepseek.com/v1/chat/completions',
     { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
+    signal,
   );
 }
 
@@ -173,12 +178,13 @@ export async function callDeepSeek(modelId, prompt, temperature, maxTokens, apiK
 // Fully OpenAI-compatible.
 // API key: https://console.mistral.ai/api-keys
 
-export async function callMistral(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callMistral(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Mistral API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.mistral.ai/v1/chat/completions',
     { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
+    signal,
   );
 }
 
@@ -187,11 +193,12 @@ export async function callMistral(modelId, prompt, temperature, maxTokens, apiKe
 // Expect sub-second latency on smaller models.
 // API key: https://console.groq.com/keys
 
-export async function callGroq(modelId, prompt, temperature, maxTokens, apiKey) {
+export async function callGroq(modelId, prompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Groq API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.groq.com/openai/v1/chat/completions',
     { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
+    signal,
   );
 }
