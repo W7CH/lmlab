@@ -152,6 +152,13 @@ export function buildCompareTable(results, tbody) {
       ? (r.tokens / (r.elapsed / 1000)).toFixed(1)
       : '—';
 
+    const est       = isOk && r.tokensEstimated;
+    const cmpTok    = est ? `~${r.tokens}`      : (isOk ? r.tokens      : '—');
+    const cmpTotal  = est
+      ? `~${r.totalTokens || r.tokens}`
+      : (isOk ? (r.totalTokens || r.tokens) : '—');
+    const estTitle  = est ? ' title="Estimated — API did not return usage stats"' : '';
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${rankCell}</td>
@@ -160,8 +167,8 @@ export function buildCompareTable(results, tbody) {
       <td style="color: ${isOk ? 'var(--warn)' : 'var(--danger)'};">${isOk ? msToSec(r.elapsed) : '—'}</td>
       <td>${isOk ? tps : '—'}</td>
       <td>${isOk ? r.promptTokens || '—' : '—'}</td>
-      <td>${isOk ? r.tokens : '—'}</td>
-      <td>${isOk ? r.totalTokens || r.tokens : '—'}</td>
+      <td${estTitle}>${cmpTok}</td>
+      <td${estTitle}>${cmpTotal}</td>
       <td><span class="badge ${isOk ? 'badge-winner' : 'badge-error'}">${isOk ? 'ok' : 'error'}</span></td>
     `;
     tbody.appendChild(tr);

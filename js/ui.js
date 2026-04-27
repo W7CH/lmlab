@@ -273,8 +273,9 @@ export function updateCard(modelId, result) {
   if (isError)     card.classList.add('error-card');
   if (isCancelled) card.classList.add('cancelled-card');
 
+  const tokLabel    = result.tokensEstimated ? `~${result.tokens}` : `${result.tokens}`;
   const statusBadge = result.status === 'ok'
-    ? `<span class="badge badge-tokens">${result.tokens} tok</span>`
+    ? `<span class="badge badge-tokens" title="${result.tokensEstimated ? 'Estimated — API did not return usage stats' : ''}">${tokLabel} tok</span>`
     : isCancelled
       ? `<span class="badge badge-cancelled">cancelled</span>`
       : `<span class="badge badge-error">error</span>`;
@@ -291,7 +292,7 @@ export function updateCard(modelId, result) {
     <div class="card-body">${bodyHtml}</div>
     <div class="card-footer">
       <span class="card-footer-stat">latency: <span>${latSec}</span></span>
-      <span class="card-footer-stat">out: <span>${result.status === 'ok' ? result.tokens + ' tok' : '—'}</span></span>
+      <span class="card-footer-stat">out: <span>${result.status === 'ok' ? tokLabel + ' tok' : '—'}</span></span>
       ${result.status === 'ok' && result.promptTokens
         ? `<span class="card-footer-stat">in: <span>${result.promptTokens} tok</span></span>`
         : ''}

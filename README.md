@@ -51,7 +51,7 @@ Total benchmark time ≈ slowest model (all models run in parallel)
 |---|---|
 | **Latency** | End-to-end response time in seconds, normalized across all backends |
 | **Throughput** | Tokens per second during inference |
-| **Token counts** | Prompt tokens, completion tokens, total — reported per model |
+| **Token counts** | Prompt tokens, completion tokens, total — reported per model; estimated counts (when the API omits usage stats) are flagged with `~` |
 | **Best-of badges** | Fastest model is automatically highlighted |
 
 ### Visualization

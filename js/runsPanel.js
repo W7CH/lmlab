@@ -111,6 +111,9 @@ function renderList() {
     item.querySelector('.run-item-delete').addEventListener('click', e => {
       e.stopPropagation();
       deleteRun(run.id);
+      const n = loadAllRuns().length;
+      const countEl = document.getElementById('runsPanelCount');
+      if (countEl) countEl.textContent = n === 0 ? '0 runs' : `${n} run${n !== 1 ? 's' : ''}`;
       item.classList.add('run-item--removing');
       setTimeout(() => { item.remove(); checkEmpty(list); }, 250);
     });

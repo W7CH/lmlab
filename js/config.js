@@ -11,18 +11,18 @@
 // ─── GEMINI MODELS ────────────────────────────────────────────────────────────
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', backend: 'gemini', active: false },
-  { id: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash',      backend: 'gemini', active: false },
-  { id: 'gemini-1.5-pro',        label: 'Gemini 1.5 Pro',        backend: 'gemini', active: false },
+  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', backend: 'gemini', active: false },
+  { id: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash',      backend: 'gemini', active: false },
+  { id: 'gemini-2.5-pro',        label: 'Gemini 2.5 Pro',        backend: 'gemini', active: false },
 ];
 
 // ─── OPENAI MODELS ────────────────────────────────────────────────────────────
 
 export const OPENAI_MODELS = [
-  { id: 'gpt-4o',      label: 'GPT-4o',      backend: 'openai', active: false },
-  { id: 'gpt-4-turbo', label: 'GPT-4 Turbo', backend: 'openai', active: false },
-  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', backend: 'openai', active: false },
-  { id: 'o3-mini',      label: 'o3 Mini',        backend: 'openai', active: false },
+  { id: 'gpt-5.5',      label: 'GPT-5.5',         backend: 'openai', active: false },
+  { id: 'gpt-5.4',      label: 'GPT-5.4',         backend: 'openai', active: false },
+  { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini',    backend: 'openai', active: false },
+  { id: 'gpt-4o',       label: 'GPT-4o (Legacy)', backend: 'openai', active: false },
 ];
 
 // ─── ANTHROPIC MODELS ─────────────────────────────────────────────────────────
@@ -36,27 +36,27 @@ export const ANTHROPIC_MODELS = [
 // ─── DEEPSEEK MODELS ──────────────────────────────────────────────────────────
 
 export const DEEPSEEK_MODELS = [
-  { id: 'deepseek-chat',     label: 'DeepSeek Chat V3', backend: 'deepseek', active: false },
-  { id: 'deepseek-reasoner', label: 'DeepSeek R1',      backend: 'deepseek', active: false },
+  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', backend: 'deepseek', active: false },
+  { id: 'deepseek-v4-pro',   label: 'DeepSeek V4 Pro',   backend: 'deepseek', active: false },
 ];
 
 // ─── MISTRAL MODELS ───────────────────────────────────────────────────────────
 
 export const MISTRAL_MODELS = [
-  { id: 'mistral-small-latest',  label: 'Mistral Small',   backend: 'mistral', active: false },
-  { id: 'mistral-medium-latest', label: 'Mistral Medium',  backend: 'mistral', active: false },
-  { id: 'mistral-large-latest',  label: 'Mistral Large',   backend: 'mistral', active: false },
+  { id: 'mistral-small-latest',   label: 'Mistral Small',               backend: 'mistral', active: false },
+  { id: 'mistral-medium-latest',  label: 'Mistral Medium',              backend: 'mistral', active: false },
+  { id: 'mistral-large-latest',   label: 'Mistral Large',               backend: 'mistral', active: false },
+  { id: 'magistral-small-latest', label: 'Magistral Small (Reasoning)', backend: 'mistral', active: false },
 ];
 
 // ─── GROQ MODELS ──────────────────────────────────────────────────────────────
 // Note: Groq provides ultra-fast inference — expect very low latency values.
 
 export const GROQ_MODELS = [
-  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B',       backend: 'groq', active: false },
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B',        backend: 'groq', active: false },
   { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B Instant', backend: 'groq', active: false },
-  { id: 'gemma2-9b-it',            label: 'Gemma 2 9B',           backend: 'groq', active: false },
-  { id: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B',         backend: 'groq', active: false },
-  { id: 'moonshotai/kimi-k2-instruct', label: 'Kimi K2',          backend: 'groq', active: false },
+  { id: 'openai/gpt-oss-120b',     label: 'GPT-OSS 120B',         backend: 'groq', active: false },
+  { id: 'openai/gpt-oss-20b',      label: 'GPT-OSS 20B',          backend: 'groq', active: false },
 ];
 
 // ─── CHART COLOR PALETTE ──────────────────────────────────────────────────────

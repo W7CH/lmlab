@@ -141,12 +141,13 @@ export async function runEval(models, selectedIds) {
         throw new Error('Empty response — the model returned no content');
       }
       resultsMap[m.id] = {
-        status:       'ok',
-        text:         res.text,
-        tokens:       res.tokens,
-        promptTokens: res.promptTokens ?? 0,
-        totalTokens:  (res.tokens ?? 0) + (res.promptTokens ?? 0),
-        chars:        res.text.length,
+        status:          'ok',
+        text:            res.text,
+        tokens:          res.tokens,
+        promptTokens:    res.promptTokens ?? 0,
+        totalTokens:     (res.tokens ?? 0) + (res.promptTokens ?? 0),
+        tokensEstimated: res.tokensEstimated ?? false,
+        chars:           res.text.length,
         elapsed,
         model: m,
       };
