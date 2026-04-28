@@ -45,6 +45,7 @@ Total benchmark time ≈ slowest model (all models run in parallel)
 | **Dynamic model discovery** | Ollama models are discovered at runtime via `/api/tags` — no static config, no restarts |
 | **Run cancellation** | Cancel any in-flight benchmark mid-run; completed results are preserved and charted, cancelled models shown distinctly |
 | **Empty response detection** | Models that return blank content are automatically reclassified as errors, keeping analytics unaffected |
+| **System prompt control** | Set a custom system prompt per run; 3 built-in presets or write your own in `js/config.js` |
 
 ### Metrics & Analytics
 | Metric | Description |
@@ -246,12 +247,22 @@ Colors are assigned automatically from a 28-color palette organized into 7 hue f
 ### Adding Prompt Presets
 
 ```js
-// js/config.js
+// User prompts
 export const PRESETS = {
   // ... existing ...
   'Linked list': `Implement a singly linked list in Python with insert, delete, search, and reverse. Include type hints and unit tests.`,
   // Add your own:
   'My prompt':  `...`,
+};
+```
+
+```js
+// System prompts
+export const SYSTEM_PRESETS = {
+  'Chain-of-Thought': `Think step by step before giving your final answer.`,
+  'JSON only':        `Respond exclusively with valid JSON. No prose, no markdown.`,
+  // Add your own:
+  'My persona':       `...`,
 };
 ```
 

@@ -27,6 +27,14 @@
   line-height: 1.6;
 }
 
+.system-prompt-textarea { min-height: 56px; }
+
+.prompt-divider {
+  height:     1px;
+  background: var(--border);
+  margin:     10px 0;
+}
+
 /* ─── PRESET BUTTONS ────────────────────────────────────────────────────────── */
 .prompt-presets {
   display:    flex;

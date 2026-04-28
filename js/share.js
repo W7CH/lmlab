@@ -21,7 +21,7 @@ const VIEWER_BASE = 'https://w7ch.github.io/lmlab/viewer.html';
  * @param {Object} resultsMap   – keyed by model id, values from eval.js
  * @returns {Object}
  */
-export function buildSharePayload(promptText, temperature, maxTokens, resultsMap) {
+export function buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap) {
   const results = Object.values(resultsMap).map(r => {
     const entry = {
       id:      r.model.id,
@@ -43,7 +43,7 @@ export function buildSharePayload(promptText, temperature, maxTokens, resultsMap
     return entry;
   });
 
-  return { v: 1, ts: Date.now(), prompt: promptText, temperature, maxTokens, results };
+  return { v: 2, ts: Date.now(), prompt: promptText, systemPrompt: systemPrompt ?? '', temperature, maxTokens, results };
 }
 
 // ─── URL GENERATION ───────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ function generateShareUrl(payload) {
  * @param {number} maxTokens
  * @param {Object} resultsMap
  */
-export function showShareButton(promptText, temperature, maxTokens, resultsMap) {
+export function showShareButton(promptText, systemPrompt, temperature, maxTokens, resultsMap) {
   document.getElementById('shareBtn')?.remove();
 
   const header = document.querySelector('#summarySection .section-header');
@@ -88,7 +88,7 @@ export function showShareButton(promptText, temperature, maxTokens, resultsMap) 
   btn.addEventListener('click', () => {
     let url;
     try {
-      url = generateShareUrl(buildSharePayload(promptText, temperature, maxTokens, resultsMap));
+      url = generateShareUrl(buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap));
     } catch {
       flash(btn, '✗ Error', 2000, null);
       return;

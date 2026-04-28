@@ -35,9 +35,12 @@ import { checkHealth, requestStart } from './ollama.js';
  * @param {import('./runs.js').RunRecord} run
  */
 export function loadRunIntoUI(run) {
-  const { prompt, params, results } = run;
+  const { prompt, systemPrompt, params, results } = run;
 
   // ── 1. Restore prompt and params ─────────────────────────────────────────
+  const sysEl = document.getElementById('systemPromptInput');
+  if (sysEl) sysEl.value = systemPrompt ?? '';
+
   const promptEl = document.getElementById('promptInput');
   if (promptEl) promptEl.value = prompt;
 
@@ -71,6 +74,7 @@ export function loadRunIntoUI(run) {
   // showShareButton() removes any stale button from a previous live run first.
   showShareButton(
     prompt,
+    systemPrompt ?? '',
     params?.temperature ?? 0.7,
     params?.maxTokens   ?? 1024,
     Object.fromEntries(results.map(r => [r.model.id, r])),
@@ -111,6 +115,9 @@ export async function rerunSavedRun(run, allModels, selectedIds, statusEl, close
   }
 
   // ── Restore prompt + select the saved models ──────────────────────────────
+  const sysRerunEl = document.getElementById('systemPromptInput');
+  if (sysRerunEl) sysRerunEl.value = run.systemPrompt ?? '';
+
   const promptEl = document.getElementById('promptInput');
   if (promptEl) promptEl.value = run.prompt;
 

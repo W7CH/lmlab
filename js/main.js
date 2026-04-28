@@ -12,7 +12,7 @@
  *   8. Assign chart colors and render the model toggle list
  */
 
-import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
+import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS, DEFAULT_SYSTEM_PROMPT, SYSTEM_PRESETS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
 import { runEval, savePendingRun, cancelRun, isRunning } from './eval.js';
@@ -38,6 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
 
   // Static sidebar controls
+  const systemPromptEl = document.getElementById('systemPromptInput');
+  if (systemPromptEl) systemPromptEl.value = DEFAULT_SYSTEM_PROMPT;
+
+  renderPresets(
+    SYSTEM_PRESETS,
+    document.getElementById('systemPresetContainer'),
+    systemPromptEl,
+  );
+
   renderPresets(
     PRESETS,
     document.getElementById('presetContainer'),

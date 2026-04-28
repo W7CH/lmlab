@@ -64,6 +64,7 @@ export async function runEval(models, selectedIds) {
     return;
   }
 
+  const systemPrompt = document.getElementById('systemPromptInput').value.trim();
   const temperature  = parseFloat(document.getElementById('tempInput').value);
   const maxTokens    = parseInt(document.getElementById('maxTokensInput').value, 10);
   const geminiKey    = document.getElementById('geminiKeyInput').value.trim();
@@ -133,7 +134,7 @@ export async function runEval(models, selectedIds) {
   const tasks = modelsToRun.map(async m => {
     const start = Date.now();
     try {
-      const res = await dispatch(m, prompt, temperature, maxTokens, {
+      const res = await dispatch(m, prompt, systemPrompt, temperature, maxTokens, {
         geminiKey, openaiKey, anthropicKey, deepseekKey, mistralKey, groqKey,
       }, signal);
       const elapsed = Date.now() - start;
@@ -172,8 +173,8 @@ export async function runEval(models, selectedIds) {
   _currentController = null;
   restoreRunBtn(runBtn);
 
-  finalise(resultsMap, { prompt, temperature, maxTokens });
-  showShareButton(prompt, temperature, maxTokens, resultsMap);
+  finalise(resultsMap, { prompt, systemPrompt, temperature, maxTokens });
+  showShareButton(prompt, systemPrompt, temperature, maxTokens, resultsMap);
 }
 
 // ─── PRIVATE ──────────────────────────────────────────────────────────────────
@@ -182,20 +183,20 @@ export async function runEval(models, selectedIds) {
  * Route a single model call to the correct API function.
  * Every branch receives the AbortSignal so fetch is cancelled on demand.
  */
-function dispatch(model, prompt, temperature, maxTokens, keys, signal) {
+function dispatch(model, prompt, systemPrompt, temperature, maxTokens, keys, signal) {
   switch (model.backend) {
-    case 'ollama':    return callOllama(model.id, prompt, temperature, maxTokens, signal);
-    case 'gemini':    return callGemini(model.id, prompt, temperature, maxTokens, keys.geminiKey, signal);
-    case 'openai':    return callOpenAI(model.id, prompt, temperature, maxTokens, keys.openaiKey, signal);
-    case 'anthropic': return callAnthropic(model.id, prompt, temperature, maxTokens, keys.anthropicKey, signal);
-    case 'deepseek':  return callDeepSeek(model.id, prompt, temperature, maxTokens, keys.deepseekKey, signal);
-    case 'mistral':   return callMistral(model.id, prompt, temperature, maxTokens, keys.mistralKey, signal);
-    case 'groq':      return callGroq(model.id, prompt, temperature, maxTokens, keys.groqKey, signal);
+    case 'ollama':    return callOllama(model.id, prompt, systemPrompt, temperature, maxTokens, signal);
+    case 'gemini':    return callGemini(model.id, prompt, systemPrompt, temperature, maxTokens, keys.geminiKey, signal);
+    case 'openai':    return callOpenAI(model.id, prompt, systemPrompt, temperature, maxTokens, keys.openaiKey, signal);
+    case 'anthropic': return callAnthropic(model.id, prompt, systemPrompt, temperature, maxTokens, keys.anthropicKey, signal);
+    case 'deepseek':  return callDeepSeek(model.id, prompt, systemPrompt, temperature, maxTokens, keys.deepseekKey, signal);
+    case 'mistral':   return callMistral(model.id, prompt, systemPrompt, temperature, maxTokens, keys.mistralKey, signal);
+    case 'groq':      return callGroq(model.id, prompt, systemPrompt, temperature, maxTokens, keys.groqKey, signal);
     default:          return Promise.reject(new Error(`Unknown backend: ${model.backend}`));
   }
 }
 
-function finalise(resultsMap, { prompt, temperature, maxTokens }) {
+function finalise(resultsMap, { prompt, systemPrompt, temperature, maxTokens }) {
   const all        = Object.values(resultsMap);
   const successful = all.filter(r => r.status === 'ok');
   const cancelled  = all.filter(r => r.status === 'cancelled');
@@ -241,7 +242,7 @@ function finalise(resultsMap, { prompt, temperature, maxTokens }) {
   buildAllCharts(all);
   buildCompareTable(all, document.getElementById('compareBody'));
 
-  const snapshot = { prompt, params: { temperature, maxTokens }, results: all };
+  const snapshot = { prompt, systemPrompt, params: { temperature, maxTokens }, results: all };
   _pendingSnapshot = snapshot;
   document.getElementById('saveRunBtn')?.classList.remove('hidden');
 }

@@ -97,6 +97,17 @@ export const CHART_COLORS = [
   '#a3e635', '#84cc16', '#bef264', '#65a30d',
 ];
 
+// ─── SYSTEM PROMPT ────────────────────────────────────────────────────────────
+
+export const DEFAULT_SYSTEM_PROMPT =
+  `You are an expert software engineer. Write clean, idiomatic code with type hints and clear docstrings. Keep explanations brief and to the point.`;
+
+export const SYSTEM_PRESETS = {
+  'Coding':   `You are an expert software engineer. Write clean, idiomatic code with type hints and clear docstrings. Keep explanations brief and to the point.`,
+  'Neutral':  `You are a helpful, harmless, and honest assistant.`,
+  'Concise':  `Be as concise as possible. No preamble, no sign-off. Answer directly.`,
+};
+
 // ─── PROMPT PRESETS ───────────────────────────────────────────────────────────
 // Key = short label shown on the preset button.
 // Value = full prompt text injected into the textarea.

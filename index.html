@@ -93,13 +93,23 @@
       <div>
         <div class="section-label">Prompt</div>
         <div class="prompt-box">
-          <label for="promptInput">Task prompt</label>
+          <label for="systemPromptInput">System prompt</label>
+          <textarea
+            id="systemPromptInput"
+            class="system-prompt-textarea"
+            placeholder="You are a helpful assistant."
+          ></textarea>
+          <div class="prompt-presets" id="systemPresetContainer">
+            <!-- Injected by main.js → renderPresets() -->
+          </div>
+          <div class="prompt-divider"></div>
+          <label for="promptInput">User prompt</label>
           <textarea
             id="promptInput"
             placeholder="Write a function that…"
           >Write a Python function that checks if a string is a palindrome, handles edge cases (empty string, spaces, punctuation), and includes docstring + type hints + 3 unit tests using unittest.</textarea>
           <div class="prompt-presets" id="presetContainer">
-            <!-- Injected by ui.js → renderPresets() -->
+            <!-- Injected by main.js → renderPresets() -->
           </div>
         </div>
       </div>

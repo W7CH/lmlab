@@ -33,7 +33,7 @@ const MAX_RUNS    = 50;
  * @returns {RunRecord}
  */
 export function saveRun(snapshot, customTitle) {
-  const { prompt, params, results } = snapshot;
+  const { prompt, systemPrompt, params, results } = snapshot;
 
   const id        = `run_${Date.now()}`;
   const createdAt = Date.now();
@@ -44,6 +44,7 @@ export function saveRun(snapshot, customTitle) {
     title,
     createdAt,
     prompt,
+    systemPrompt: systemPrompt ?? '',
     params,
     results: results.map(r => ({
       model: {

@@ -18,7 +18,19 @@
  *   promptTokens — input token count (0 if not reported by the API)
  */
 
-// ─── SHARED HELPERS ───────────────────────────────────────────────────────────
+// ─── SHARED HELPERS ──────────────────────────────────────────────────────────
+
+/**
+ * Build the messages array, prepending a system message when provided.
+ * Used by all OpenAI-compatible backends.
+ * Anthropic uses a top-level `system` field instead — handled in callAnthropic.
+ */
+function buildMessages(systemPrompt, userPrompt) {
+  const msgs = [];
+  if (systemPrompt) msgs.push({ role: 'system', content: systemPrompt });
+  msgs.push({ role: 'user', content: userPrompt });
+  return msgs;
+}
 
 /**
  * Rough token count when the API doesn't return usage stats.
@@ -61,10 +73,10 @@ async function callCompletions(url, body, headers = {}, signal) {
  * Call a local Ollama model via the server.js proxy at /v1/*.
  * No CORS issues — the browser never contacts port 11434 directly.
  */
-export async function callOllama(modelId, prompt, temperature, maxTokens, signal) {
+export async function callOllama(modelId, prompt, systemPrompt, temperature, maxTokens, signal) {
   return callCompletions('/v1/chat/completions', {
     model:      modelId,
-    messages:   [{ role: 'user', content: prompt }],
+    messages:   buildMessages(systemPrompt, prompt),
     temperature,
     max_tokens: maxTokens,
     stream:     false,
@@ -77,13 +89,13 @@ export async function callOllama(modelId, prompt, temperature, maxTokens, signal
  * Call a Gemini model via Google's OpenAI-compatible endpoint.
  * API key: https://aistudio.google.com/app/apikey
  */
-export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callGemini(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Google API key is required for Gemini. Enter it in the sidebar.');
   return callCompletions(
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     {
       model:      modelId,
-      messages:   [{ role: 'user', content: prompt }],
+      messages:   buildMessages(systemPrompt, prompt),
       temperature,
       max_tokens: maxTokens,
     },
@@ -102,14 +114,14 @@ export async function callGemini(modelId, prompt, temperature, maxTokens, apiKey
  * Note: o1 models do not support the temperature parameter; it is omitted
  * automatically when modelId starts with "o1".
  */
-export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callOpenAI(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('OpenAI API key is required for GPT models. Enter it in the sidebar.');
   const isO1 = modelId.startsWith('o1') || modelId.startsWith('o3');
   return callCompletions(
     'https://api.openai.com/v1/chat/completions',
     {
       model:      modelId,
-      messages:   [{ role: 'user', content: prompt }],
+      messages:   buildMessages(systemPrompt, prompt),
       max_tokens: maxTokens,
       // "o" models reject the temperature field entirely
       ...(!isO1 && { temperature }),
@@ -132,7 +144,7 @@ export async function callOpenAI(modelId, prompt, temperature, maxTokens, apiKey
  * Because the browser cannot call api.anthropic.com directly (CORS), this
  * request is routed through server.js's /api/anthropic/messages proxy route.
  */
-export async function callAnthropic(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callAnthropic(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Anthropic API key is required for Claude. Enter it in the sidebar.');
 
   const response = await fetch('/api/anthropic/messages', {
@@ -143,6 +155,8 @@ export async function callAnthropic(modelId, prompt, temperature, maxTokens, api
       model:       modelId,
       max_tokens:  maxTokens,
       temperature,
+      // Anthropic uses a top-level `system` field, not a message role
+      ...(systemPrompt && { system: systemPrompt }),
       messages:    [{ role: 'user', content: prompt }],
     }),
     signal,
@@ -166,11 +180,11 @@ export async function callAnthropic(modelId, prompt, temperature, maxTokens, api
 // Fully OpenAI-compatible — only the base URL and key differ.
 // API key: https://platform.deepseek.com/api_keys
 
-export async function callDeepSeek(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callDeepSeek(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('DeepSeek API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.deepseek.com/v1/chat/completions',
-    { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
+    { model: modelId, messages: buildMessages(systemPrompt, prompt), temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
     signal,
   );
@@ -180,11 +194,11 @@ export async function callDeepSeek(modelId, prompt, temperature, maxTokens, apiK
 // Fully OpenAI-compatible.
 // API key: https://console.mistral.ai/api-keys
 
-export async function callMistral(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callMistral(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Mistral API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.mistral.ai/v1/chat/completions',
-    { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
+    { model: modelId, messages: buildMessages(systemPrompt, prompt), temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
     signal,
   );
@@ -195,11 +209,11 @@ export async function callMistral(modelId, prompt, temperature, maxTokens, apiKe
 // Expect sub-second latency on smaller models.
 // API key: https://console.groq.com/keys
 
-export async function callGroq(modelId, prompt, temperature, maxTokens, apiKey, signal) {
+export async function callGroq(modelId, prompt, systemPrompt, temperature, maxTokens, apiKey, signal) {
   if (!apiKey) throw new Error('Groq API key is required. Enter it in the sidebar.');
   return callCompletions(
     'https://api.groq.com/openai/v1/chat/completions',
-    { model: modelId, messages: [{ role: 'user', content: prompt }], temperature, max_tokens: maxTokens },
+    { model: modelId, messages: buildMessages(systemPrompt, prompt), temperature, max_tokens: maxTokens },
     { Authorization: `Bearer ${apiKey}` },
     signal,
   );
