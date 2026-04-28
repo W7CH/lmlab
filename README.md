@@ -296,7 +296,7 @@ After a successful run, a **Share** button appears in the Run Summary header. Cl
 
 The recipient opens the URL to see the full comparison — all charts, syntax-highlighted response cards, summary metrics — with no server running and no API keys required. The viewer includes its own dark/light theme toggle.
 
-> **Note:** Share URLs encode the entire payload in the fragment. Very long outputs across many models can approach browser URL limits (~2 MB). For routine comparisons, this is not a concern.
+> **Note:** Share URLs encode the entire payload in the fragment. Very long outputs across many models can approach browser URL limits (~2 MB). For routine comparisons, this is not a concern. Payloads under 200 KB are copied as-is. Larger payloads are automatically rebuilt with responses capped at 2,000 characters and re-compressed — the viewer will show trimmed responses but all metrics and timing are preserved. If the result still exceeds 1.5 MB, the Share button will report **✗ Too large** with an explanation. In practice, this only occurs when benchmarking many models with very long outputs simultaneously.
 
 ---
 

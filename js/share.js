@@ -10,6 +10,14 @@
 
 const VIEWER_BASE = 'https://w7ch.github.io/lmlab/viewer.html';
 
+// Compressed ?data= length thresholds.
+// GitHub Pages / Fastly rejects request lines above ~8 KB; CDN limits aside,
+// browsers start choking past 2 MB. We fall back to a compact payload (trimmed
+// response text) before that limit, and error out if even compact is too large.
+const SHARE_SOFT_LIMIT  = 200_000;  // chars — try compact payload
+const SHARE_HARD_LIMIT  = 1_500_000; // chars — refuse entirely
+const COMPACT_TEXT_CHARS = 2_000;    // chars to keep per response in compact mode
+
 // ─── PAYLOAD ──────────────────────────────────────────────────────────────────
 
 /**
@@ -49,18 +57,43 @@ export function buildSharePayload(promptText, systemPrompt, temperature, maxToke
 // ─── URL GENERATION ───────────────────────────────────────────────────────────
 
 /**
- * Compress a payload object to a full viewer URL.
- * Depends on window.LZString being available (loaded via CDN script tag).
+ * Compress a payload to a viewer URL, falling back to a compact version when
+ * the full payload would exceed safe URL-length limits.
  *
  * @param {Object} payload
- * @returns {string}
+ * @returns {{ url: string, truncated: boolean }}
+ * @throws {Error} when even the compact payload exceeds SHARE_HARD_LIMIT
  */
 function generateShareUrl(payload) {
   if (typeof LZString === 'undefined') {
     throw new Error('LZString library is not loaded — check the CDN script tag in index.html.');
   }
-  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(payload));
-  return `${VIEWER_BASE}?data=${compressed}`;
+
+  const compress = p => LZString.compressToEncodedURIComponent(JSON.stringify(p));
+
+  const full = compress(payload);
+  if (full.length <= SHARE_SOFT_LIMIT) {
+    return { url: `${VIEWER_BASE}?data=${full}`, truncated: false };
+  }
+
+  // Full payload is too large — rebuild with trimmed response text.
+  const compact = {
+    ...payload,
+    results: payload.results.map(r => {
+      if (r.text && r.text.length > COMPACT_TEXT_CHARS) {
+        return { ...r, text: r.text.slice(0, COMPACT_TEXT_CHARS) + '\n\n[Truncated — response was too long to share in full]' };
+      }
+      return r;
+    }),
+  };
+
+  const compactStr = compress(compact);
+  if (compactStr.length > SHARE_HARD_LIMIT) {
+    const mb = (compactStr.length / 1_000_000).toFixed(1);
+    throw new Error(`Payload too large to share (${mb} MB even after truncation). Try fewer models.`);
+  }
+
+  return { url: `${VIEWER_BASE}?data=${compactStr}`, truncated: true };
 }
 
 // ─── BUTTON ───────────────────────────────────────────────────────────────────
@@ -86,16 +119,23 @@ export function showShareButton(promptText, systemPrompt, temperature, maxTokens
   btn.innerHTML = '<span class="share-icon" aria-hidden="true">↗</span>Share';
 
   btn.addEventListener('click', () => {
-    let url;
+    let result;
     try {
-      url = generateShareUrl(buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap));
-    } catch {
-      flash(btn, '✗ Error', 2000, null);
+      result = generateShareUrl(buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap));
+    } catch (err) {
+      flash(btn, '✗ Too large', 3000, null);
+      btn.title = err.message;
       return;
     }
 
+    const { url, truncated } = result;
+
     navigator.clipboard.writeText(url).then(() => {
-      flash(btn, '✓ Copied!', 2500, 'share-btn--copied');
+      flash(btn,
+        truncated ? '✓ Copied (truncated)' : '✓ Copied!',
+        truncated ? 3500 : 2500,
+        'share-btn--copied',
+      );
     }).catch(() => {
       // Clipboard API unavailable (e.g. non-HTTPS) — surface URL to the user
       window.prompt('Copy this shareable link:', url);
