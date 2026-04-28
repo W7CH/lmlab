@@ -15,7 +15,7 @@
 
 <br/>
 
-[Quickstart](#quickstart) · [Features](#features) · [Architecture](#architecture) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting)
+[Quickstart](#quickstart) · [Features](#features) · [LLM-as-Judge](#llm-as-judge-evaluation) · [Architecture](#architecture) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting)
 
 </div>
 
@@ -45,7 +45,8 @@ Total benchmark time ≈ slowest model (all models run in parallel)
 | **Dynamic model discovery** | Ollama models are discovered at runtime via `/api/tags` — no static config, no restarts |
 | **Run cancellation** | Cancel any in-flight benchmark mid-run; completed results are preserved and charted, cancelled models shown distinctly |
 | **Empty response detection** | Models that return blank content are automatically reclassified as errors, keeping analytics unaffected |
-| **System prompt control** | Set a custom system prompt per run; 3 built-in presets or write your own in `js/config.js` |
+| **System prompt control** | Set a custom system prompt per run; 3 built-in presets or define your own in `js/config.js` |
+| **LLM-as-Judge evaluation** | Score all responses with any model as judge; pluggable evaluator registry with criteria-based scoring, ranked output, and winner rationale |
 
 ### Metrics & Analytics
 | Metric | Description |
@@ -71,6 +72,49 @@ Total benchmark time ≈ slowest model (all models run in parallel)
 - **Single config file** — `js/config.js` controls everything: models, colors, presets, defaults
 - **Light / dark theme** — zero-flash theme switching persisted to `localStorage`, respects `prefers-color-scheme` on first visit
 - **28-color backend-consistent palette** — 7 hue families, one per provider; chart bars, card accents, and model dots are always backend-scannable
+
+---
+
+## LLM-as-Judge Evaluation
+
+After a benchmark run completes, LMLab can score all model responses using a second model as an automated judge. This turns raw latency and token data into a **qualitative assessment** — which model actually answered better, and why.
+
+### How it works
+
+1. Select an **evaluator type** from the dropdown (default: General Quality)
+2. Select a **judge model** — any configured cloud model or local Ollama model, grouped by backend
+3. Click **Evaluate** — the judge receives all responses in a single structured prompt and returns scores, a ranking, and a written rationale
+
+The judge runs at temperature 0 with a strict JSON system prompt. The evaluation panel appears automatically after each run and resets at the start of the next one.
+
+### Scoring criteria (General Quality evaluator)
+
+| Criterion | What it measures |
+|---|---|
+| **Correctness** | Accuracy, completeness, factual correctness |
+| **Robustness** | Edge case handling, error conditions, real-world constraints |
+| **Efficiency** | Conciseness, algorithmic efficiency, minimal redundancy |
+| **Quality** | Style, readability, documentation, best-practice adherence |
+
+Each criterion is scored 1–10. The evaluator also produces an overall ranking and a concise paragraph naming the winner and key differentiators.
+
+### Adding a custom evaluator
+
+Evaluators live in `js/evaluators.js` as a pluggable registry. Add an entry and it appears in the dropdown automatically — no other wiring needed:
+
+```js
+// js/evaluators.js
+export const EVALUATORS = [
+  {
+    id:    'security',
+    label: 'Security Review',
+    criteria: { /* your scoring dimensions */ },
+    buildPrompt: ({ prompt, systemPrompt, responses }) => `...`,
+    parse:       (raw) => { /* strip fences, validate, return scores */ },
+  },
+  // ...
+];
+```
 
 ---
 
@@ -199,7 +243,9 @@ lmlab/
     ├── config.js       # Models per backend, palette, presets, defaults
     ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
     ├── api.js          # fetch() wrappers for all 7 backends
-    ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch)
+    ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch, abort control)
+    ├── evaluators.js   # Pluggable judge evaluator registry
+    ├── judge.js        # LLM-as-Judge orchestration + result rendering
     ├── share.js        # Serialization, compression, URL generation, clipboard copy
     ├── runs.js         # Pure localStorage CRUD — no DOM, no imports
     ├── loadRun.js      # Restore UI from stored run, handle rerun + Ollama guard
@@ -296,7 +342,7 @@ After a successful run, a **Share** button appears in the Run Summary header. Cl
 
 The recipient opens the URL to see the full comparison — all charts, syntax-highlighted response cards, summary metrics — with no server running and no API keys required. The viewer includes its own dark/light theme toggle.
 
-> **Note:** Share URLs encode the entire payload in the fragment. Very long outputs across many models can approach browser URL limits (~2 MB). For routine comparisons, this is not a concern. Payloads under 200 KB are copied as-is. Larger payloads are automatically rebuilt with responses capped at 2,000 characters and re-compressed — the viewer will show trimmed responses but all metrics and timing are preserved. If the result still exceeds 1.5 MB, the Share button will report **✗ Too large** with an explanation. In practice, this only occurs when benchmarking many models with very long outputs simultaneously.
+> **Note:** Share URLs encode the entire payload in the fragment. Very long outputs across many models can approach browser URL limits (~2 MB). Payloads under 200 KB are copied as-is. Larger payloads are automatically rebuilt with responses capped at 2,000 characters and re-compressed — the viewer will show trimmed responses but all metrics and timing are preserved. If the result still exceeds 1.5 MB, the Share button will report **✗ Too large** with an explanation. In practice, this only occurs when benchmarking many models with very long outputs simultaneously.
 
 ---
 

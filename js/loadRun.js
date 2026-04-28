@@ -17,6 +17,7 @@ import {
 import { buildAllCharts, buildCompareTable } from './charts.js';
 import { showShareButton } from './share.js';
 import { runEval }         from './eval.js';
+import { showJudgeSection, renderEvaluationResults } from './judge.js';
 import { truncate }        from './utils.js';
 import { checkHealth, requestStart } from './ollama.js';
 
@@ -69,6 +70,12 @@ export function loadRunIntoUI(run) {
   // ── 5. Status bar ────────────────────────────────────────────────────────
   const when = new Date(run.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
   setStatus('done', `Loaded: "${truncate(run.title, 50)}" — saved ${when}`);
+
+  // ── 6. Restore evaluation if present ────────────────────────────────────
+  if (run.evaluation) {
+    showJudgeSection();
+    renderEvaluationResults(run.evaluation, results);
+  }
 
   // Inject a fresh Share button with a closure over this run's data.
   // showShareButton() removes any stale button from a previous live run first.

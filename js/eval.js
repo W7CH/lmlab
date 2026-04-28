@@ -25,6 +25,7 @@ import {
 import { buildAllCharts, buildCompareTable } from './charts.js';
 import { showShareButton } from './share.js';
 import { saveRun } from './runs.js';
+import { showJudgeSection, hideJudgeSection, getLastEvaluation } from './judge.js';
 
 // ─── MODULE STATE ─────────────────────────────────────────────────────────────
 
@@ -42,13 +43,16 @@ export function isRunning() { return _currentController !== null; }
 /** Abort all in-flight requests for the current run. */
 export function cancelRun() { _currentController?.abort(); }
 
+/** Returns the last completed run's data for the judge. */
+export function getLastRunData() { return _pendingSnapshot; }
+
 /**
  * Called by main.js when the user clicks "Save Run".
  * Returns the saved RunRecord or null if nothing to save.
  */
 export function savePendingRun() {
   if (!_pendingSnapshot) return null;
-  return saveRun(_pendingSnapshot);
+  return saveRun({ ..._pendingSnapshot, evaluation: getLastEvaluation() });
 }
 
 export async function runEval(models, selectedIds) {
@@ -84,6 +88,7 @@ export async function runEval(models, selectedIds) {
   const runBtn = document.getElementById('runBtn');
   _pendingSnapshot = null;
   hideSummary();
+  hideJudgeSection();
   hideEmptyState();
   document.getElementById('resultsGrid').innerHTML = '';
   document.getElementById('saveRunBtn')?.classList.add('hidden');
@@ -245,6 +250,7 @@ function finalise(resultsMap, { prompt, systemPrompt, temperature, maxTokens }) 
   const snapshot = { prompt, systemPrompt, params: { temperature, maxTokens }, results: all };
   _pendingSnapshot = snapshot;
   document.getElementById('saveRunBtn')?.classList.remove('hidden');
+  showJudgeSection();
 }
 
 function setRunBtnCancelling(btn) {

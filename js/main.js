@@ -15,7 +15,8 @@
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS, DEFAULT_SYSTEM_PROMPT, SYSTEM_PRESETS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
-import { runEval, savePendingRun, cancelRun, isRunning } from './eval.js';
+import { runEval, savePendingRun, cancelRun, isRunning, getLastRunData } from './eval.js';
+import { populateJudgeSelector, populateEvaluatorSelector, runJudge } from './judge.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
 import { openRunsPanel, closeRunsPanel } from './runsPanel.js';
@@ -78,6 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.disabled = false;
       btn.classList.add('hidden'); // hide after save — already in saved runs
     }, 2000);
+  });
+
+  // Evaluate button (LLM-as-a-Judge)
+  populateEvaluatorSelector();
+  document.getElementById('evaluateBtn')?.addEventListener('click', () => {
+    const runData = getLastRunData();
+    if (runData) runJudge(runData, allModels);
   });
 
   // Saved Runs panel button (header)
@@ -243,6 +251,7 @@ async function refreshModels() {
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
                                     DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
     return;
   }
 
@@ -257,12 +266,14 @@ async function refreshModels() {
     allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
                                     DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
   } catch (err) {
     setOllamaStatus('error', err.message);
     setModelListState('error', 'Could not load model list');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
                                     DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
   }
 }
 

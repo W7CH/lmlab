@@ -368,6 +368,28 @@
         <div class="bar-chart" id="tokenChart"></div>
       </div>
 
+      <!-- ── LLM-as-a-Judge ────────────────────────────────────────────── -->
+      <div id="judgeSection" class="judge-section hidden">
+        <div class="judge-section-header">
+          <h2>LLM-as-Judge</h2>
+          <div class="judge-controls">
+            <label class="judge-label" for="evaluatorSelect">Evaluator</label>
+            <select id="evaluatorSelect" class="judge-select">
+              <!-- populated by judge.js populateEvaluatorSelector() -->
+            </select>
+            <label class="judge-label" for="judgeModelSelect">Judge model</label>
+            <select id="judgeModelSelect" class="judge-select judge-model-select">
+              <option value="">— Select model —</option>
+            </select>
+            <button id="evaluateBtn" class="evaluate-btn">⚖ Judge</button>
+          </div>
+        </div>
+        <div id="judgeStatus" class="judge-status hidden"></div>
+        <div id="judgeResults" class="hidden">
+          <!-- rendered by judge.js renderEvaluationResults() -->
+        </div>
+      </div>
+
     </main><!-- /content -->
   </div><!-- /main -->
 

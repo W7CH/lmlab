@@ -1511,3 +1511,201 @@
 .runs-empty-icon  { font-size: 28px; opacity: 0.3; }
 .runs-empty-title { font-size: 13px; font-weight: 600; color: var(--text); opacity: 0.5; }
 .runs-empty-sub   { font-size: 11px; color: var(--muted); max-width: 220px; line-height: 1.6; }
+
+/* ─── LLM-AS-A-JUDGE ────────────────────────────────────────────────────────── */
+
+.judge-section {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.judge-section-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  flex-wrap:       wrap;
+  gap:             10px;
+  margin-bottom:   14px;
+}
+
+.judge-section-header h2 {
+  font-size:   14px;
+  font-weight: 600;
+  color:       var(--text);
+  margin:      0;
+}
+
+.judge-controls {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-wrap:   wrap;
+}
+
+.judge-label {
+  font-size:   11px;
+  color:       var(--muted);
+  white-space: nowrap;
+}
+
+.judge-select {
+  background:    var(--bg4);
+  border:        1px solid var(--border2);
+  border-radius: 6px;
+  padding:       5px 8px;
+  font-size:     12px;
+  color:         var(--text);
+  font-family:   var(--font-ui);
+  outline:       none;
+  cursor:        pointer;
+  transition:    border-color 0.15s;
+}
+.judge-select:hover  { border-color: var(--accent); }
+.judge-select:focus  { border-color: var(--accent); }
+
+.judge-model-select { min-width: 180px; }
+
+.evaluate-btn {
+  padding:       6px 14px;
+  background:    var(--accent);
+  color:         #fff;
+  border:        none;
+  border-radius: var(--radius);
+  font-family:   var(--font-ui);
+  font-size:     13px;
+  font-weight:   600;
+  cursor:        pointer;
+  white-space:   nowrap;
+  transition:    background 0.15s, transform 0.1s;
+}
+.evaluate-btn:hover    { background: #7f9fff; transform: translateY(-1px); }
+.evaluate-btn:active   { transform: translateY(0); }
+.evaluate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Status line */
+.judge-status {
+  padding:       8px 12px;
+  border-radius: var(--radius);
+  font-size:     12px;
+  margin-bottom: 12px;
+}
+.judge-status--running  { background: color-mix(in srgb, var(--accent) 10%, var(--bg3)); color: var(--accent); }
+.judge-status--starting { background: color-mix(in srgb, var(--warn) 10%, var(--bg3));   color: var(--warn); }
+.judge-status--error    { background: color-mix(in srgb, var(--danger) 10%, var(--bg3)); color: var(--danger); }
+
+/* Winner card */
+.judge-winner-card {
+  display:       flex;
+  align-items:   center;
+  gap:           14px;
+  padding:       14px 18px;
+  background:    color-mix(in srgb, var(--winner-color, var(--accent)) 8%, var(--bg3));
+  border:        1px solid var(--winner-color, var(--accent));
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+.judge-winner-icon {
+  font-size:   28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.judge-winner-info  { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.judge-winner-eyebrow {
+  font-size:      10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          var(--muted);
+}
+.judge-winner-name {
+  font-size:   16px;
+  font-weight: 700;
+  color:       var(--text);
+}
+.judge-by {
+  font-size:  11px;
+  color:      var(--muted);
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+/* Reason block */
+.judge-reason {
+  font-size:     12px;
+  color:         var(--muted);
+  line-height:   1.7;
+  margin:        0 0 16px;
+  padding:       10px 14px;
+  background:    var(--bg3);
+  border-left:   3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Score table */
+.judge-table-wrap {
+  overflow-x: auto;
+}
+
+.judge-table {
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       12px;
+}
+
+.judge-table th {
+  text-align:    left;
+  padding:       6px 10px;
+  font-size:     11px;
+  font-weight:   500;
+  color:         var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space:   nowrap;
+}
+
+.judge-table td {
+  padding:       8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.judge-winner-row td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+.judge-rank-cell { font-size: 16px; width: 36px; text-align: center; }
+
+.judge-model-cell {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  font-weight: 500;
+  min-width:   140px;
+}
+
+.judge-model-dot {
+  width:         8px;
+  height:        8px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.judge-avg-cell {
+  font-weight:  600;
+  color:        var(--text);
+  white-space:  nowrap;
+}
+
+/* Score badges */
+.judge-score {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  width:           30px;
+  height:          24px;
+  border-radius:   5px;
+  font-size:       12px;
+  font-weight:     600;
+  font-family:     var(--font-code);
+}
+.judge-score--high { background: rgba(52,  211, 153, 0.15); color: #34d399; }
+.judge-score--mid  { background: rgba(251, 191,  36, 0.15); color: var(--warn); }
+.judge-score--low  { background: rgba(239,  68,  68, 0.15); color: var(--danger); }
+.judge-score--na   { color: var(--muted); }
