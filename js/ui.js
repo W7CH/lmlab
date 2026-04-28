@@ -29,8 +29,9 @@ export function setStatus(type, message) {
 
 // ─── MODEL LIST ───────────────────────────────────────────────────────────────
 
-const BACKEND_ORDER  = ['ollama', 'gemini', 'openai', 'anthropic'];
-const BACKEND_LABELS = { ollama: 'Ollama', gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Anthropic' };
+const BACKEND_ORDER  = ['ollama', 'gemini', 'openai', 'anthropic', 'deepseek', 'mistral', 'groq'];
+const BACKEND_LABELS = { ollama: 'Ollama', gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Anthropic',
+                         deepseek: 'DeepSeek', mistral: 'Mistral', groq: 'Groq' };
 
 // localStorage key for tracking which backend groups are collapsed
 const KEY_MODEL_GROUPS = 'llm-eval-model-groups-collapsed';
@@ -260,11 +261,24 @@ export function updateCard(modelId, result) {
   const accent = m.color ?? '#6c8bff';
   const latSec = msToSec(result.elapsed);
 
+  const isCancelled = result.status === 'cancelled';
+  const isError     = result.status === 'error';
+
   const bodyHtml = result.status === 'ok'
     ? `<pre><code class="language-python">${escapeHtml(result.text)}</code></pre>`
-    : `<div class="card-error">✗ ${escapeHtml(result.error)}</div>`;
+    : isCancelled
+      ? `<div class="card-cancelled">⊘ Cancelled</div>`
+      : `<div class="card-error">✗ ${escapeHtml(result.error)}</div>`;
 
-  if (result.status === 'error') card.classList.add('error-card');
+  if (isError)     card.classList.add('error-card');
+  if (isCancelled) card.classList.add('cancelled-card');
+
+  const tokLabel    = result.tokensEstimated ? `~${result.tokens}` : `${result.tokens}`;
+  const statusBadge = result.status === 'ok'
+    ? `<span class="badge badge-tokens" title="${result.tokensEstimated ? 'Estimated — API did not return usage stats' : ''}">${tokLabel} tok</span>`
+    : isCancelled
+      ? `<span class="badge badge-cancelled">cancelled</span>`
+      : `<span class="badge badge-error">error</span>`;
 
   card.innerHTML = `
     <div class="card-header" style="--card-accent: ${accent};">
@@ -272,15 +286,13 @@ export function updateCard(modelId, result) {
       <div class="card-badges">
         <span class="badge badge-${m.backend}">${m.backend}</span>
         <span class="badge badge-time">${latSec}</span>
-        ${result.status === 'ok'
-          ? `<span class="badge badge-tokens">${result.tokens} tok</span>`
-          : `<span class="badge badge-error">error</span>`}
+        ${statusBadge}
       </div>
     </div>
     <div class="card-body">${bodyHtml}</div>
     <div class="card-footer">
       <span class="card-footer-stat">latency: <span>${latSec}</span></span>
-      <span class="card-footer-stat">out: <span>${result.status === 'ok' ? result.tokens + ' tok' : '—'}</span></span>
+      <span class="card-footer-stat">out: <span>${result.status === 'ok' ? tokLabel + ' tok' : '—'}</span></span>
       ${result.status === 'ok' && result.promptTokens
         ? `<span class="card-footer-stat">in: <span>${result.promptTokens} tok</span></span>`
         : ''}
@@ -361,7 +373,6 @@ export function setOllamaStatus(state, detail = '') {
   const sub   = document.getElementById('ollamaStatusSub');
   if (!pill) return;
 
-  // Remove all state classes, add the new one
   pill.className = `ollama-status-pill ollama-status-${state}`;
 
   const labels = {

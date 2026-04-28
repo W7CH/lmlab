@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236c8bff'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-family='system-ui' font-size='60' font-weight='bold' fill='white'>Lab</text></svg>">
+  <title>LMLab — Shared Results</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Syntax highlighting -->
+  <link
+    id="hljs-theme"
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+
+  <!-- LZ-string: URL-safe compression/decompression -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Zero-flash theme init: runs before first paint -->
+  <script>
+    (function () {
+      const saved  = localStorage.getItem('llm-eval-theme');
+      const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = saved ?? (osDark ? 'dark' : 'light');
+    })();
+  </script>
+
+  <!-- Viewer entry point -->
+  <script type="module" src="js/viewer.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="25" fill="#6c8bff"/>
+          <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+                font-family="system-ui" font-size="55" font-weight="bold" fill="white">
+            Lab
+          </text>
+        </svg>
+      </div>
+      <div>
+        <h1>LMLab</h1>
+        <span>Shared Results</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-badge">view only</span>
+      <button class="theme-btn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1"  x2="12" y2="3"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="1"  y1="12" x2="3"  y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VIEWER CONTENT
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div class="viewer-wrap">
+
+    <!-- Error state (shown when ?data= is missing or corrupt) -->
+    <div id="viewerError" class="viewer-error hidden"></div>
+
+    <!-- ── Prompt display ───────────────────────────────────────────────── -->
+    <div id="viewerPromptSection" class="hidden">
+      <div class="viewer-prompt-box">
+        <div class="viewer-prompt-meta">
+          <span class="section-label" style="margin-bottom:0;">Prompt</span>
+          <span id="viewerTimestamp" class="viewer-timestamp"></span>
+        </div>
+        <pre id="viewerPromptText" class="viewer-prompt-text"></pre>
+        <div id="viewerParams" class="viewer-params"></div>
+      </div>
+    </div>
+
+    <!-- ── Run Summary + tabs (hidden until renderView() calls remove hidden) -->
+    <div id="summarySection" class="hidden">
+      <div class="section-header">
+        <h2>Run Summary</h2>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="results">Results</button>
+          <button class="tab-btn"        data-tab="compare">Compare</button>
+          <button class="tab-btn"        data-tab="chart">Latency</button>
+          <button class="tab-btn"        data-tab="throughput">Throughput</button>
+          <button class="tab-btn"        data-tab="tokens">Tokens</button>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <div class="metric-card">
+          <div class="metric-label">Models run</div>
+          <div class="metric-val"  id="metricModels">—</div>
+          <div class="metric-sub" id="metricSuccess">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Fastest response</div>
+          <div class="metric-val"  id="metricFastest">—</div>
+          <div class="metric-sub" id="metricFastestModel">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg latency</div>
+          <div class="metric-val"  id="metricAvg">—</div>
+          <div class="metric-sub">across all models</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Best throughput</div>
+          <div class="metric-val"  id="metricTps">—</div>
+          <div class="metric-sub" id="metricTpsModel">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Avg total tokens</div>
+          <div class="metric-val"  id="metricTokens">—</div>
+          <div class="metric-sub">prompt + completion</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: Results grid ──────────────────────────────────────────────── -->
+    <div id="tabResults">
+      <div class="results-grid" id="resultsGrid"></div>
+    </div>
+
+    <!-- ── TAB: Compare table ─────────────────────────────────────────────── -->
+    <div id="tabCompare" class="hidden">
+      <div class="compare-wrapper">
+        <table class="compare-table" id="compareTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Model</th>
+              <th>Backend</th>
+              <th>Latency</th>
+              <th>Tok / s</th>
+              <th>Prompt tok</th>
+              <th>Completion tok</th>
+              <th>Total tok</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="compareBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: Latency chart ──────────────────────────────────────────────── -->
+    <div id="tabChart" class="hidden">
+      <p class="chart-title">Response latency — lower is faster</p>
+      <div class="bar-chart" id="latencyChart"></div>
+    </div>
+
+    <!-- ── TAB: Throughput chart ───────────────────────────────────────────── -->
+    <div id="tabThroughput" class="hidden">
+      <p class="chart-title">Output throughput (tok / s) — higher is faster</p>
+      <div class="bar-chart" id="throughputChart"></div>
+    </div>
+
+    <!-- ── TAB: Token usage chart ─────────────────────────────────────────── -->
+    <div id="tabTokens" class="hidden">
+      <p class="chart-title">Token usage — prompt + completion (lower = more efficient)</p>
+      <div class="bar-chart" id="tokenChart"></div>
+    </div>
+
+    <!-- ── Footer ────────────────────────────────────────────────────────── -->
+    <footer class="viewer-footer">
+      Generated with <a href="https://github.com/W7CH/lmlab/" target="_blank" rel="noopener noreferrer">LMLab</a>
+    </footer>
+
+  </div><!-- /viewer-wrap -->
+
+</body>
+</html>

@@ -12,14 +12,17 @@
  *   8. Assign chart colors and render the model toggle list
  */
 
-import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, CHART_COLORS, PRESETS, DEFAULTS } from './config.js';
+import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS, DEFAULT_SYSTEM_PROMPT, SYSTEM_PRESETS } from './config.js';
 import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
 import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
-import { runEval } from './eval.js';
+import { runEval, savePendingRun, cancelRun, isRunning, getLastRunData } from './eval.js';
+import { populateJudgeSelector, populateEvaluatorSelector, runJudge } from './judge.js';
+import { initTheme, toggleTheme } from './theme.js';
+import { initTabs } from './tabs.js';
+import { openRunsPanel, closeRunsPanel } from './runsPanel.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
-const KEY_THEME    = 'llm-eval-theme';
-const KEY_API_KEYS  = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
+const KEY_API_KEYS = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids
 
 // ─── LIVE STATE ───────────────────────────────────────────────────────────────
 
@@ -36,6 +39,15 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
 
   // Static sidebar controls
+  const systemPromptEl = document.getElementById('systemPromptInput');
+  if (systemPromptEl) systemPromptEl.value = DEFAULT_SYSTEM_PROMPT;
+
+  renderPresets(
+    SYSTEM_PRESETS,
+    document.getElementById('systemPresetContainer'),
+    systemPromptEl,
+  );
+
   renderPresets(
     PRESETS,
     document.getElementById('presetContainer'),
@@ -46,15 +58,47 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tempInput').value      = DEFAULTS.temperature;
   document.getElementById('maxTokensInput').value = DEFAULTS.maxTokens;
 
-  // Run button
-  document.getElementById('runBtn').addEventListener('click', () => {
-    runEval(allModels, selectedModels);
+  // Run / Cancel button — same element, branches on whether a run is active
+  document.getElementById('runBtn')
+    .addEventListener('click', () => {
+      if (isRunning()) cancelRun();
+      else runEval(allModels, selectedModels);
+    });
+
+  // Save Run button
+  document.getElementById('saveRunBtn')?.addEventListener('click', e => {
+    const btn = e.currentTarget;
+    const record = savePendingRun();
+    if (!record) return;
+    btn.textContent = '✓ Saved!';
+    btn.classList.add('save-run-btn--saved');
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '⊕ Save Run';
+      btn.classList.remove('save-run-btn--saved');
+      btn.disabled = false;
+      btn.classList.add('hidden'); // hide after save — already in saved runs
+    }, 2000);
   });
 
-  // Tab buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  // Evaluate button (LLM-as-a-Judge)
+  populateEvaluatorSelector();
+  document.getElementById('evaluateBtn')?.addEventListener('click', () => {
+    const runData = getLastRunData();
+    if (runData) runJudge(runData, allModels);
   });
+
+  // Saved Runs panel button (header)
+  document.getElementById('savedRunsBtn')?.addEventListener('click', () => {
+    openRunsPanel(allModels, selectedModels);
+  });
+
+  // Runs panel close button + backdrop
+  document.getElementById('runsPanelClose')?.addEventListener('click', closeRunsPanel);
+  document.getElementById('runsBackdrop')?.addEventListener('click', closeRunsPanel);
+
+  // Tab buttons
+  initTabs();
 
   // Ollama ↺ button:
   //   • If Ollama is already running  → refresh the model list (fast check)
@@ -204,8 +248,10 @@ async function refreshModels() {
 
   if (!health.running) {
     setOllamaStatus('stopped', 'Click ↺ to start · or auto-starts on Run');
-    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
     return;
   }
 
@@ -217,23 +263,37 @@ async function refreshModels() {
         ? `${ollamaModels.length} model(s) available`
         : 'No models pulled yet',
     );
-    allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList(ollamaModels, GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
   } catch (err) {
     setOllamaStatus('error', err.message);
     setModelListState('error', 'Could not load model list');
-    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS);
+    allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
+                                    DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));
+    populateJudgeSelector(allModels);
   }
 }
 
 // ─── MODEL LIST BUILDER ───────────────────────────────────────────────────────
 
-/**
- * Merge all model sources and assign chart colors by position.
- * Order: Ollama (alphabetical) → Gemini → OpenAI → Anthropic
- */
-function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModels) {
+function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModels, deepseekModels, mistralModels, groqModels) {
+  // Colors are assigned per-backend in blocks so models from the same provider
+  // share a hue family in charts. Each block of 4 colors in CHART_COLORS maps
+  // to one backend: ollama=0-3, gemini=4-7, openai=8-11, anthropic=12-15,
+  // deepseek=16-19, mistral=20-23, groq=24-27.
+  const colorOffset = { ollama: 0, gemini: 4, openai: 8, anthropic: 12, deepseek: 16, mistral: 20, groq: 24 };
+  const groupCount  = { ollama: 0, gemini: 0, openai: 0, anthropic: 0, deepseek: 0, mistral: 0, groq: 0 };
+
+  function assignColor(backend) {
+    const base  = colorOffset[backend] ?? 0;
+    const count = groupCount[backend]  ?? 0;
+    groupCount[backend] = count + 1;
+    return CHART_COLORS[(base + count) % CHART_COLORS.length];
+  }
+
   const merged = [
     ...ollamaModels.map(m => ({
       id:      m.id,
@@ -242,60 +302,13 @@ function buildModelList(ollamaModels, geminiModels, openaiModels, anthropicModel
       active:  false,
       meta:    { family: m.family, parameterSize: m.parameterSize, sizeGb: m.sizeGb },
     })),
-    ...geminiModels.map(m    => ({ ...m, active: m.active    ?? false })),
-    ...openaiModels.map(m    => ({ ...m, active: m.active    ?? false })),
-    ...anthropicModels.map(m => ({ ...m, active: m.active    ?? false })),
+    ...(geminiModels    ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(openaiModels    ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(anthropicModels ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(deepseekModels  ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(mistralModels   ?? []).map(m => ({ ...m, active: m.active ?? false })),
+    ...(groqModels      ?? []).map(m => ({ ...m, active: m.active ?? false })),
   ];
-  return merged.map((m, i) => ({ ...m, color: CHART_COLORS[i % CHART_COLORS.length] }));
-}
 
-// ─── THEME ────────────────────────────────────────────────────────────────────
-
-const HLJS_DARK  = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
-const HLJS_LIGHT = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css';
-
-function initTheme() {
-  const saved  = localStorage.getItem(KEY_THEME);
-  const osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved ?? (osDark ? 'dark' : 'light'));
-}
-
-/** Flip between dark and light and persist the choice. */
-function toggleTheme() {
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-}
-
-/**
- * Apply a theme:
- *   1. Set data-theme on <html> — CSS variables update immediately
- *   2. Swap the highlight.js stylesheet href
- *   3. Re-highlight any code blocks already rendered
- *   4. Persist choice to localStorage
- */
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  const link = document.getElementById('hljs-theme');
-  if (link) link.href = theme === 'dark' ? HLJS_DARK : HLJS_LIGHT;
-
-  // Re-highlight any code blocks already in the DOM
-  if (typeof hljs !== 'undefined') {
-    document.querySelectorAll('pre code[class*="language-"]').forEach(block => {
-      delete block.dataset.highlighted;
-      hljs.highlightElement(block);
-    });
-  }
-  localStorage.setItem(KEY_THEME, theme);
-}
-
-// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
-
-const TAB_IDS = ['results', 'compare', 'chart', 'throughput', 'tokens'];
-
-function switchTab(name) {
-  TAB_IDS.forEach(t => {
-    document.getElementById(`tab${t[0].toUpperCase()}${t.slice(1)}`)
-      ?.classList.toggle('hidden', t !== name);
-  });
-  document.querySelectorAll('.tab-btn')
-    .forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+  return merged.map(m => ({ ...m, color: assignColor(m.backend) }));
 }

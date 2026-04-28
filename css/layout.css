@@ -171,11 +171,14 @@ header {
 
 /* ─── SECTION HEADER ─────────────────────────────────────────────────────────── */
 .section-header {
-  display:         flex;
-  align-items:     center;
-  justify-content: space-between;
-  margin-bottom:   12px;
+  display:      flex;
+  align-items:  center;
+  gap:          8px;
+  margin-bottom: 12px;
 }
+
+/* Push the tab row to the far right; h2 + Share button stay grouped on the left */
+.section-header .tabs { margin-left: auto; }
 
 .section-header h2 {
   font-size:   13px;
