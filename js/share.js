@@ -8,6 +8,8 @@
  * Encoding    : compressToEncodedURIComponent — already URL-safe, no extra step needed
  */
 
+import { getLastEvaluation } from './judge.js';
+
 const VIEWER_BASE = 'https://w7ch.github.io/lmlab/viewer.html';
 
 // Compressed ?data= length thresholds.
@@ -29,7 +31,7 @@ const COMPACT_TEXT_CHARS = 2_000;    // chars to keep per response in compact mo
  * @param {Object} resultsMap   – keyed by model id, values from eval.js
  * @returns {Object}
  */
-export function buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap) {
+export function buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap, evaluation) {
   const results = Object.values(resultsMap).map(r => {
     const entry = {
       id:      r.model.id,
@@ -51,7 +53,7 @@ export function buildSharePayload(promptText, systemPrompt, temperature, maxToke
     return entry;
   });
 
-  return { v: 2, ts: Date.now(), prompt: promptText, systemPrompt: systemPrompt ?? '', temperature, maxTokens, results };
+  return { v: 2, ts: Date.now(), prompt: promptText, systemPrompt: systemPrompt ?? '', temperature, maxTokens, evaluation: evaluation ?? null, results };
 }
 
 // ─── URL GENERATION ───────────────────────────────────────────────────────────
@@ -121,7 +123,7 @@ export function showShareButton(promptText, systemPrompt, temperature, maxTokens
   btn.addEventListener('click', () => {
     let result;
     try {
-      result = generateShareUrl(buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap));
+      result = generateShareUrl(buildSharePayload(promptText, systemPrompt, temperature, maxTokens, resultsMap, getLastEvaluation()));
     } catch (err) {
       flash(btn, '✗ Too large', 3000, null);
       btn.title = err.message;

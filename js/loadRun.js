@@ -17,7 +17,7 @@ import {
 import { buildAllCharts, buildCompareTable } from './charts.js';
 import { showShareButton } from './share.js';
 import { runEval }         from './eval.js';
-import { showJudgeSection, renderEvaluationResults } from './judge.js';
+import { showJudgeSection, hideJudgeSection, renderEvaluationResults } from './judge.js';
 import { truncate }        from './utils.js';
 import { checkHealth, requestStart } from './ollama.js';
 
@@ -71,10 +71,12 @@ export function loadRunIntoUI(run) {
   const when = new Date(run.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
   setStatus('done', `Loaded: "${truncate(run.title, 50)}" — saved ${when}`);
 
-  // ── 6. Restore evaluation if present ────────────────────────────────────
-  if (run.evaluation) {
+  // ── 6. Restore evaluation if present (only for multi-model runs) ─────────
+  if (results.length > 1 && run.evaluation) {
     showJudgeSection();
     renderEvaluationResults(run.evaluation, results);
+  } else {
+    hideJudgeSection();
   }
 
   // Inject a fresh Share button with a closure over this run's data.

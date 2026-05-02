@@ -198,6 +198,8 @@ export async function runJudge(runData, allModels) {
  * @param {object[]} results     — run results (for model color/label lookup)
  */
 export function renderEvaluationResults(evalResult, results) {
+  _lastEval = evalResult;
+
   const container = document.getElementById('judgeResults');
   if (!container) return;
 
@@ -243,9 +245,11 @@ export function renderEvaluationResults(evalResult, results) {
     return `
       <tr class="${m.id === winner ? 'judge-winner-row' : ''}">
         <td class="judge-rank-cell">${medal}</td>
-        <td class="judge-model-cell">
-          <span class="judge-model-dot" style="background:${m.model.color};"></span>
-          ${escHtml(m.model.label)}
+        <td>
+          <div class="judge-model-cell">
+            <span class="judge-model-dot" style="background:${m.model.color};"></span>
+            ${escHtml(m.model.label)}
+          </div>
         </td>
         ${cells.join('')}
         <td class="judge-avg-cell">${avg.toFixed(1)}</td>

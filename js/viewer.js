@@ -17,6 +17,7 @@ import { updateCard, markWinner, renderSummary } from './ui.js';
 import { buildAllCharts, buildCompareTable } from './charts.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
+import { renderEvaluationResults } from './judge.js';
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,11 @@ function loadPayload() {
 
 function renderView(payload) {
   // ── Prompt section ────────────────────────────────────────────────────────
+  if (payload.systemPrompt) {
+    document.getElementById('viewerSystemPromptText').textContent = payload.systemPrompt;
+    document.getElementById('viewerSystemPromptWrap').classList.remove('hidden');
+  }
+
   document.getElementById('viewerPromptText').textContent = payload.prompt ?? '';
   document.getElementById('viewerParams').innerHTML =
     `<span class="viewer-param-badge">Temp: ${payload.temperature}</span>` +
@@ -116,6 +122,12 @@ function renderView(payload) {
   // ── Charts + compare table (reuses buildAllCharts / buildCompareTable) ──
   buildAllCharts(results);
   buildCompareTable(results, document.getElementById('compareBody'));
+
+  // ── Evaluation results (if present in payload) ───────────────────────────
+  if (payload.evaluation) {
+    document.getElementById('judgeSection')?.classList.remove('hidden');
+    renderEvaluationResults(payload.evaluation, results);
+  }
 }
 
 // ─── ERROR STATE ──────────────────────────────────────────────────────────────
