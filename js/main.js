@@ -13,13 +13,13 @@
  */
 
 import { GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS, CHART_COLORS, PRESETS, DEFAULTS, DEFAULT_SYSTEM_PROMPT, SYSTEM_PRESETS } from './config.js';
-import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui.js';
-import { checkHealth, fetchOllamaModels, requestStart } from './ollama.js';
+import { renderModelList, renderPresets, setOllamaStatus, setModelListState } from './ui/ui.js';
+import { checkHealth, fetchOllamaModels, requestStart } from './api/ollama.js';
 import { runEval, savePendingRun, cancelRun, isRunning, getLastRunData } from './eval.js';
 import { populateJudgeSelector, populateEvaluatorSelector, runJudge } from './judge.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
-import { openRunsPanel, closeRunsPanel } from './runsPanel.js';
+import { openRunsPanel, closeRunsPanel } from './ui/runsPanel.js';
 
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
 const KEY_API_KEYS = 'llm-eval-api-keys-open';  // JSON array of expanded provider ids

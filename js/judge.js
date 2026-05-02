@@ -13,9 +13,10 @@
  *   renderEvaluationResults(eval, results) — re-render from saved run
  */
 
-import { callOllama, callGemini, callOpenAI, callAnthropic, callDeepSeek, callMistral, callGroq } from './api.js';
-import { ensureOllamaRunning } from './ollama.js';
-import { EVALUATORS } from './evaluators.js';
+import { callOllama, callGemini, callOpenAI, callAnthropic, callDeepSeek, callMistral, callGroq } from './api/llm.js';
+import { ensureOllamaRunning } from './api/ollama.js';
+import { EVALUATORS } from './core/evaluators.js';
+import { escHtml, readApiKeys } from './utils.js';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 
@@ -294,16 +295,6 @@ async function callJudgeModel(model, prompt, keys) {
   }
 }
 
-function readApiKeys() {
-  return {
-    geminiKey:    document.getElementById('geminiKeyInput')?.value.trim()    ?? '',
-    openaiKey:    document.getElementById('openaiKeyInput')?.value.trim()     ?? '',
-    anthropicKey: document.getElementById('anthropicKeyInput')?.value.trim() ?? '',
-    deepseekKey:  document.getElementById('deepseekKeyInput')?.value.trim()  ?? '',
-    mistralKey:   document.getElementById('mistralKeyInput')?.value.trim()   ?? '',
-    groqKey:      document.getElementById('groqKeyInput')?.value.trim()      ?? '',
-  };
-}
 
 function setJudgeStatus(type, message) {
   const el = document.getElementById('judgeStatus');
@@ -330,6 +321,3 @@ function scoreClass(v) {
 
 function cap(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
 
-function escHtml(str = '') {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

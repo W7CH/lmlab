@@ -8,7 +8,7 @@
  * Encoding    : compressToEncodedURIComponent — already URL-safe, no extra step needed
  */
 
-import { getLastEvaluation } from './judge.js';
+import { getLastEvaluation } from '../judge.js';
 
 const VIEWER_BASE = 'https://w7ch.github.io/lmlab/viewer.html';
 

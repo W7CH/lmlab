@@ -100,10 +100,10 @@ Each criterion is scored 1–10. The evaluator also produces an overall ranking 
 
 ### Adding a custom evaluator
 
-Evaluators live in `js/evaluators.js` as a pluggable registry. Add an entry and it appears in the dropdown automatically — no other wiring needed:
+Evaluators live in `js/core/evaluators.js` as a pluggable registry. Add an entry and it appears in the dropdown automatically — no other wiring needed:
 
 ```js
-// js/evaluators.js
+// js/core/evaluators.js
 export const EVALUATORS = [
   {
     id:    'security',
@@ -230,33 +230,41 @@ POST /api/anthropic/ ────► proxyToAnthropic()
 
 ```
 lmlab/
-├── server.js           # Dev server, Ollama lifecycle manager, API proxies
-├── index.html          # App shell — HTML only, no inline styles or scripts
-├── viewer.html         # Self-contained read-only share target, decodes run from URL fragment
-├── package.json        # ES module config, npm start entry point
+├── server.js              # Dev server, Ollama lifecycle manager, API proxies
+├── index.html             # App shell — HTML only, no inline styles or scripts
+├── viewer.html            # Self-contained read-only share target, decodes run from URL
+├── package.json           # ES module config, npm start entry point
 │
 ├── css/
-│   ├── variables.css   # Design tokens — :root (invariant), [data-theme="dark/light"]
-│   ├── layout.css      # Reset, header, sidebar, content area
-│   └── components.css  # Every reusable UI component
+│   ├── variables.css      # Design tokens — :root (invariant), [data-theme="dark/light"]
+│   ├── layout.css         # Reset, header, sidebar, content area
+│   └── components.css     # Every reusable UI component
 │
 └── js/
-    ├── config.js       # Models per backend, palette, presets, defaults
-    ├── ollama.js       # Browser-side Ollama health check, auto-start, model discovery
-    ├── api.js          # fetch() wrappers for all 7 backends
-    ├── eval.js         # Parallel evaluation orchestrator (multi-backend dispatch, abort control)
-    ├── evaluators.js   # Pluggable judge evaluator registry
-    ├── judge.js        # LLM-as-Judge orchestration + result rendering
-    ├── share.js        # Serialization, compression, URL generation, clipboard copy
-    ├── runs.js         # Pure localStorage CRUD — no DOM, no imports
-    ├── loadRun.js      # Restore UI from stored run, handle rerun + Ollama guard
-    ├── runsPanel.js    # Saved runs drawer — render + user actions
-    ├── ui.js           # DOM builders: cards, model list, skeletons, status bar
-    ├── charts.js       # Latency, Throughput, Tokens charts + comparison table
-    ├── theme.js        # initTheme, toggleTheme, applyTheme (shared by index + viewer)
-    ├── tabs.js         # Tab switching via data-tab attributes (shared by index + viewer)
-    ├── utils.js        # Shared helpers for runsPanel + loadRun
-    └── main.js         # Entry point — wires everything
+    │
+    ├── api/               # Infrastructure — external HTTP calls, no DOM
+    │   ├── llm.js         # fetch() wrappers for all 7 backends
+    │   └── ollama.js      # Ollama health check, auto-start, model discovery
+    │
+    ├── core/              # Domain & data — business logic, no DOM dependencies
+    │   ├── evaluators.js  # Pluggable judge evaluator registry
+    │   ├── runs.js        # localStorage CRUD for saved runs
+    │   └── share.js       # Payload serialization, compression, URL generation
+    │
+    ├── ui/                # Rendering — everything that touches the DOM
+    │   ├── ui.js          # Cards, model list, skeletons, status bar, presets
+    │   ├── charts.js      # Latency, throughput, token charts, comparison table
+    │   └── runsPanel.js   # Saved runs slide-in drawer
+    │
+    ├── config.js          # Models per backend, color palette, presets, defaults
+    ├── eval.js            # Parallel evaluation orchestrator (dispatch, abort control)
+    ├── judge.js           # LLM-as-Judge orchestration + result rendering
+    ├── loadRun.js         # Restore UI from a stored run; handle rerun + Ollama guard
+    ├── theme.js           # initTheme / toggleTheme (shared by main + viewer)
+    ├── tabs.js            # Tab switching via data-tab attributes (shared by main + viewer)
+    ├── utils.js           # String helpers, HTML escaping, API key reader
+    ├── main.js            # App entry point — wires everything together
+    └── viewer.js          # Viewer entry point — decodes URL, renders read-only run
 ```
 
 > **The only file you need to touch regularly is `js/config.js`.** Everything else — model discovery, evaluation, rendering, persistence — is self-contained.

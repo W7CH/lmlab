@@ -10,8 +10,8 @@
  *   5. Collects: latency, completion tokens, prompt tokens, response length
  */
 
-import { callOllama, callGemini, callOpenAI, callAnthropic, callDeepSeek, callMistral, callGroq } from './api.js';
-import { ensureOllamaRunning } from './ollama.js';
+import { callOllama, callGemini, callOpenAI, callAnthropic, callDeepSeek, callMistral, callGroq } from './api/llm.js';
+import { ensureOllamaRunning } from './api/ollama.js';
 import {
   setStatus,
   setOllamaStatus,
@@ -21,10 +21,11 @@ import {
   hideEmptyState,
   hideSummary,
   renderSummary,
-} from './ui.js';
-import { buildAllCharts, buildCompareTable } from './charts.js';
-import { showShareButton } from './share.js';
-import { saveRun } from './runs.js';
+} from './ui/ui.js';
+import { buildAllCharts, buildCompareTable } from './ui/charts.js';
+import { showShareButton } from './core/share.js';
+import { saveRun } from './core/runs.js';
+import { readApiKeys } from './utils.js';
 import { showJudgeSection, hideJudgeSection, getLastEvaluation } from './judge.js';
 
 // ─── MODULE STATE ─────────────────────────────────────────────────────────────
@@ -71,12 +72,7 @@ export async function runEval(models, selectedIds) {
   const systemPrompt = document.getElementById('systemPromptInput').value.trim();
   const temperature  = parseFloat(document.getElementById('tempInput').value);
   const maxTokens    = parseInt(document.getElementById('maxTokensInput').value, 10);
-  const geminiKey    = document.getElementById('geminiKeyInput').value.trim();
-  const openaiKey    = document.getElementById('openaiKeyInput').value.trim();
-  const anthropicKey = document.getElementById('anthropicKeyInput').value.trim();
-  const deepseekKey  = document.getElementById('deepseekKeyInput').value.trim();
-  const mistralKey   = document.getElementById('mistralKeyInput').value.trim();
-  const groqKey      = document.getElementById('groqKeyInput').value.trim();
+  const { geminiKey, openaiKey, anthropicKey, deepseekKey, mistralKey, groqKey } = readApiKeys();
 
   const modelsToRun = models.filter(m => selectedIds.has(m.id));
   const needsOllama = modelsToRun.some(m => m.backend === 'ollama');

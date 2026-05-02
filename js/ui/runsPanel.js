@@ -15,9 +15,9 @@
  * This module handles open/close and rendering only.
  */
 
-import { loadAllRuns, deleteRun, renameRun, exportRunJson } from './runs.js';
-import { loadRunIntoUI, rerunSavedRun } from './loadRun.js';
-import { truncate, escHtml } from './utils.js';
+import { loadAllRuns, deleteRun, renameRun, exportRunJson } from '../core/runs.js';
+import { loadRunIntoUI, rerunSavedRun } from '../loadRun.js';
+import { truncate, escHtml } from '../utils.js';
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -198,4 +198,3 @@ function onKeyDown(e) {
 function formatDate(ts) {
   return new Date(ts).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 }
-
