@@ -899,26 +899,60 @@
 .model-group:last-child { margin-bottom: 0; }
 
 .model-group-header {
-  display:         flex;
-  align-items:     center;
-  gap:             6px;
-  width:           100%;
-  padding:         6px 10px;
-  background:      var(--bg4);
-  border:          1px solid var(--border);
-  border-radius:   var(--radius);
-  cursor:          pointer;
-  user-select:     none;
-  font-family:     var(--font-ui);
-  transition:      background 0.15s, border-color 0.15s;
+  display:       flex;
+  align-items:   stretch;
+  background:    var(--bg4);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  transition:    border-color 0.15s;
 }
 
 .model-group-header:hover { border-color: var(--border2); }
 
-.model-group-header[aria-expanded="true"] {
+.model-group-header--open {
   border-bottom-left-radius:  0;
   border-bottom-right-radius: 0;
   border-bottom-color:        transparent;
+}
+
+.model-group-toggle {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  flex:        1;
+  min-width:   0;
+  padding:     6px 8px 6px 10px;
+  background:  transparent;
+  border:      none;
+  cursor:      pointer;
+  user-select: none;
+  font-family: var(--font-ui);
+  text-align:  left;
+}
+
+.model-group-selall {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           28px;
+  flex-shrink:     0;
+  background:      transparent;
+  border:          none;
+  border-left:     1px solid var(--border);
+  border-radius:   0 var(--radius) var(--radius) 0;
+  cursor:          pointer;
+  font-size:       12px;
+  color:           var(--muted);
+  transition:      background 0.12s, color 0.12s;
+}
+
+.model-group-selall:hover {
+  background: var(--bg3);
+  color:      var(--text);
+}
+
+.model-group-header--open .model-group-selall {
+  border-radius: 0;
 }
 
 .model-group-name {
@@ -947,7 +981,7 @@
   font-weight: 500;
 }
 
-.model-group-header .toggle-chevron {
+.model-group-toggle .toggle-chevron {
   font-size:   13px;
   color:       var(--muted);
   transition:  transform 0.18s ease;
@@ -955,7 +989,7 @@
   flex-shrink: 0;
 }
 
-.model-group-header[aria-expanded="true"] .toggle-chevron {
+.model-group-header--open .toggle-chevron {
   transform: rotate(90deg);
 }
 
