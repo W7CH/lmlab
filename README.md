@@ -142,7 +142,7 @@ git clone https://github.com/W7CH/lmlab.git
 cd lmlab
 
 # 2. Start the server — that's it, no npm install
-node server.js
+node server.js # or: npm start
 
 # 3. Open the dashboard
 #    → http://localhost:8080
@@ -233,6 +233,7 @@ lmlab/
 ├── server.js           # Dev server, Ollama lifecycle manager, API proxies
 ├── index.html          # App shell — HTML only, no inline styles or scripts
 ├── viewer.html         # Self-contained read-only share target, decodes run from URL fragment
+├── package.json        # ES module config, npm start entry point
 │
 ├── css/
 │   ├── variables.css   # Design tokens — :root (invariant), [data-theme="dark/light"]
