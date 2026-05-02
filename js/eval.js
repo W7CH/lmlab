@@ -250,7 +250,8 @@ function finalise(resultsMap, { prompt, systemPrompt, temperature, maxTokens }) 
   const snapshot = { prompt, systemPrompt, params: { temperature, maxTokens }, results: all };
   _pendingSnapshot = snapshot;
   document.getElementById('saveRunBtn')?.classList.remove('hidden');
-  showJudgeSection();
+  if (all.length > 1) showJudgeSection();
+  else hideJudgeSection();
 }
 
 function setRunBtnCancelling(btn) {

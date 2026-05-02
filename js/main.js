@@ -247,7 +247,7 @@ async function refreshModels() {
   const health = await checkHealth();
 
   if (!health.running) {
-    setOllamaStatus('stopped', 'Click ↺ to start · or auto-starts on Run');
+    setOllamaStatus('stopped', 'Click ↺ to start');
     allModels      = buildModelList([], GEMINI_MODELS, OPENAI_MODELS, ANTHROPIC_MODELS,
                                     DEEPSEEK_MODELS, MISTRAL_MODELS, GROQ_MODELS);
     selectedModels = renderModelList(allModels, document.getElementById('modelList'));

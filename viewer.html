@@ -99,6 +99,11 @@
           <span class="section-label" style="margin-bottom:0;">Prompt</span>
           <span id="viewerTimestamp" class="viewer-timestamp"></span>
         </div>
+        <div id="viewerSystemPromptWrap" class="hidden">
+          <span class="viewer-system-label">System prompt</span>
+          <pre id="viewerSystemPromptText" class="viewer-system-prompt-text"></pre>
+          <div class="prompt-divider"></div>
+        </div>
         <pre id="viewerPromptText" class="viewer-prompt-text"></pre>
         <div id="viewerParams" class="viewer-params"></div>
       </div>
@@ -188,6 +193,14 @@
     <div id="tabTokens" class="hidden">
       <p class="chart-title">Token usage — prompt + completion (lower = more efficient)</p>
       <div class="bar-chart" id="tokenChart"></div>
+    </div>
+
+    <!-- ── LLM Evaluation results (shown only when payload includes evaluation) -->
+    <div id="judgeSection" class="judge-section hidden">
+      <div class="judge-section-header">
+        <h2>LLM-as-Judge</h2>
+      </div>
+      <div id="judgeResults" class="hidden"></div>
     </div>
 
     <!-- ── Footer ────────────────────────────────────────────────────────── -->

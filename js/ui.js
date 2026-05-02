@@ -119,12 +119,16 @@ export function renderModelList(models, container) {
     groupEl.className        = 'model-group';
     groupEl.dataset.backend  = backend;
 
-    // ── Header button ────────────────────────────────────────────────────────
-    const header = document.createElement('button');
-    header.className        = 'model-group-header';
-    header.setAttribute('aria-expanded', String(!isCollapsed));
+    // ── Header container (div so we can nest buttons inside) ─────────────────
+    const header = document.createElement('div');
+    header.className = `model-group-header${isCollapsed ? '' : ' model-group-header--open'}`;
+
+    // Inner toggle button — handles collapse/expand
+    const toggle = document.createElement('button');
+    toggle.className = 'model-group-toggle';
+    toggle.setAttribute('aria-expanded', String(!isCollapsed));
     const selectedCount = group.filter(m => selected.has(m.id)).length;
-    header.innerHTML = `
+    toggle.innerHTML = `
       <span class="model-group-name">${BACKEND_LABELS[backend] ?? backend}</span>
       <span class="model-group-count">${group.length}</span>
       ${selectedCount > 0
@@ -132,6 +136,11 @@ export function renderModelList(models, container) {
         : ''}
       <span class="toggle-chevron" aria-hidden="true">›</span>
     `;
+
+    // Select-all / deselect-all button
+    const selAllBtn = document.createElement('button');
+    selAllBtn.className = 'model-group-selall';
+    refreshSelAllBtn(selAllBtn, group, selected);
 
     // ── Body ─────────────────────────────────────────────────────────────────
     const body = document.createElement('div');
@@ -161,17 +170,35 @@ export function renderModelList(models, container) {
           selected.add(m.id);
           item.classList.add('active');
         }
-        // Update the "N selected" counter in the header
-        refreshGroupCounter(header, group, selected);
+        refreshGroupCounter(toggle, group, selected);
+        refreshSelAllBtn(selAllBtn, group, selected);
       });
 
       body.appendChild(item);
     });
 
-    // ── Toggle handler ────────────────────────────────────────────────────────
-    header.addEventListener('click', () => {
+    // ── Select-all handler ────────────────────────────────────────────────────
+    selAllBtn.addEventListener('click', () => {
+      const allSel = group.every(m => selected.has(m.id));
+      group.forEach(m => {
+        const item = body.querySelector(`[data-id="${CSS.escape(m.id)}"]`);
+        if (allSel) {
+          selected.delete(m.id);
+          item?.classList.remove('active');
+        } else {
+          selected.add(m.id);
+          item?.classList.add('active');
+        }
+      });
+      refreshGroupCounter(toggle, group, selected);
+      refreshSelAllBtn(selAllBtn, group, selected);
+    });
+
+    // ── Collapse/expand handler ───────────────────────────────────────────────
+    toggle.addEventListener('click', () => {
       const nowOpen = body.classList.toggle('model-group-body--open');
-      header.setAttribute('aria-expanded', String(nowOpen));
+      toggle.setAttribute('aria-expanded', String(nowOpen));
+      header.classList.toggle('model-group-header--open', nowOpen);
       if (nowOpen) {
         collapsed.delete(backend);
       } else {
@@ -180,6 +207,8 @@ export function renderModelList(models, container) {
       saveCollapsedGroups(collapsed);
     });
 
+    header.appendChild(toggle);
+    header.appendChild(selAllBtn);
     groupEl.appendChild(header);
     groupEl.appendChild(body);
     container.appendChild(groupEl);
@@ -188,20 +217,25 @@ export function renderModelList(models, container) {
   return selected;
 }
 
-function refreshGroupCounter(header, group, selected) {
+function refreshGroupCounter(toggle, group, selected) {
   const count = group.filter(m => selected.has(m.id)).length;
-  let sel = header.querySelector('.model-group-sel');
+  let sel = toggle.querySelector('.model-group-sel');
   if (count > 0) {
     if (!sel) {
       sel = document.createElement('span');
       sel.className = 'model-group-sel';
-      // insert before the chevron
-      header.insertBefore(sel, header.querySelector('.toggle-chevron'));
+      toggle.insertBefore(sel, toggle.querySelector('.toggle-chevron'));
     }
     sel.textContent = `${count} selected`;
   } else if (sel) {
     sel.remove();
   }
+}
+
+function refreshSelAllBtn(btn, group, selected) {
+  const allSel = group.length > 0 && group.every(m => selected.has(m.id));
+  btn.textContent = allSel ? '✕' : '✓';
+  btn.title       = allSel ? 'Deselect all' : 'Select all';
 }
 
 function loadCollapsedGroups() {
