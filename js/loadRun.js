@@ -13,13 +13,13 @@ import {
   setStatus, setOllamaStatus,
   insertLoadingCard, updateCard, markWinner,
   hideEmptyState, hideSummary, renderSummary,
-} from './ui.js';
-import { buildAllCharts, buildCompareTable } from './charts.js';
-import { showShareButton } from './share.js';
+} from './ui/ui.js';
+import { buildAllCharts, buildCompareTable } from './ui/charts.js';
+import { showShareButton } from './core/share.js';
 import { runEval }         from './eval.js';
 import { showJudgeSection, hideJudgeSection, renderEvaluationResults } from './judge.js';
 import { truncate }        from './utils.js';
-import { checkHealth, requestStart } from './ollama.js';
+import { checkHealth, requestStart } from './api/ollama.js';
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 

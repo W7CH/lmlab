@@ -13,8 +13,8 @@
  *   tabs.js   → initTabs
  */
 
-import { updateCard, markWinner, renderSummary } from './ui.js';
-import { buildAllCharts, buildCompareTable } from './charts.js';
+import { updateCard, markWinner, renderSummary } from './ui/ui.js';
+import { buildAllCharts, buildCompareTable } from './ui/charts.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { initTabs } from './tabs.js';
 import { renderEvaluationResults } from './judge.js';
