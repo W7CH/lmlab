@@ -31,6 +31,14 @@ It unifies **local models via Ollama** and **7 frontier providers** (OpenAI, Ant
 Total benchmark time ≈ slowest model (all models run in parallel)
 ```
 
+<div align="center">
+
+![LMLab in action](lmlab.gif)
+
+*Parallel benchmark across 3 local models — judged by a Groq model*
+
+</div>
+
 ---
 
 ## Features
