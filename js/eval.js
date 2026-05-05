@@ -27,6 +27,7 @@ import { showShareButton } from './core/share.js';
 import { saveRun } from './core/runs.js';
 import { readApiKeys } from './utils.js';
 import { showJudgeSection, hideJudgeSection, getLastEvaluation } from './judge.js';
+import { switchTab } from './tabs.js';
 
 // ─── MODULE STATE ─────────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ export async function runEval(models, selectedIds) {
   hideSummary();
   hideJudgeSection();
   hideEmptyState();
+  switchTab('results');
   document.getElementById('resultsGrid').innerHTML = '';
   document.getElementById('saveRunBtn')?.classList.add('hidden');
   setRunBtnCancelling(runBtn);
