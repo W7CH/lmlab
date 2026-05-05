@@ -1197,16 +1197,6 @@
   padding:       10px 12px;
 }
 
-.viewer-system-label {
-  display:       block;
-  font-size:     10px;
-  font-weight:   600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color:         var(--muted);
-  margin-bottom: 6px;
-}
-
 .viewer-system-prompt-text {
   font-family:   var(--font-code);
   font-size:     11px;
